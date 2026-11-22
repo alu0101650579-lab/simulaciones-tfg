@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Péndulo Elástico | Mecánica Lagrangiana (TFG)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuración de fuentes e iconos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=STIX+Two+Math&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        math: ['STIX Two Math', 'serif'],
+                    },
+                    colors: {
+                        ull: {
+                            DEFAULT: '#57018c',
+                            light: '#7a22b0',
+                            blue: '#005792'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos personalizados para deslizadores y fórmulas matemáticas */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.3);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #6366f1;
+            margin-top: -5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.18);
+            background: #4f46e5;
+        }
+        .math-serif {
+            font-family: 'STIX Two Math', 'Cambria Math', 'Times New Roman', serif;
+        }
+        /* Scrollbar sutil */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-300 min-h-screen flex flex-col">
+
+    <!-- BARRA SUPERIOR -->
+    <header class="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-md sticky top-0 z-30 px-4 py-2.5">
+        <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-700 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-bezier-curve text-white text-sm"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">
+                            Péndulo Elástico en <span class="math-serif font-normal text-indigo-400">ℝ²</span>
+                        </h1>
+                        <span class="hidden sm:inline-block text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            Sección 1.2 · 2 Grados de Libertad
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden md:block">
+                        Integración RK4 de las Ecuaciones de Euler-Lagrange en coordenadas generalizadas <span class="math-serif"><b>x</b> = (r, θ)</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Acciones rápidas y modo papel LaTeX -->
+            <div class="flex items-center gap-2">
+                <button id="btnPaperMode" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5" title="Alternar fondo blanco académico para exportar a LaTeX">
+                    <i class="fa-solid fa-file-pdf text-rose-400"></i>
+                    <span id="paperModeText">Modo Papel LaTeX: OFF</span>
+                </button>
+                <button id="btnExportPNG" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm shadow-indigo-500/30 transition flex items-center gap-1.5" title="Descargar imagen PNG para carpeta ilustraciones/ en Overleaf">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Capturar PNG</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- COLUMNA IZQUIERDA: LIENZO INTERACTIVO + TELEMETRÍA ENERGÉTICA (8 cols en LG) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+
+            <!-- Tarjeta del Lienzo Principal -->
+            <div class="relative rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-2xl flex-1 min-h-[440px] sm:min-h-[540px] flex flex-col">
+                
+                <!-- Barra flotante superior dentro del canvas -->
+                <div class="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+                    <!-- Controles de reproducción -->
+                    <div class="flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-lg pointer-events-auto">
+                        <button id="btnPlayPause" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                            <i id="iconPlayPause" class="fa-solid fa-pause"></i>
+                            <span id="textPlayPause">Pausar</span>
+                        </button>
+                        <button id="btnStep" class="p-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition" title="Avanzar un paso de integración">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+                        <button id="btnReset" class="p-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition flex items-center gap-1" title="Reiniciar a condiciones iniciales">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span class="hidden sm:inline">Reiniciar</span>
+                        </button>
+                        <button id="btnClearTrace" class="p-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs transition flex items-center gap-1" title="Limpiar solo la traza dibujada">
+                            <i class="fa-solid fa-eraser"></i>
+                            <span class="hidden sm:inline">Borrar traza</span>
+                        </button>
+                    </div>
+
+                    <!-- Indicadores de coordenadas en vivo -->
+                    <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-xl shadow-lg text-xs font-mono flex items-center gap-3 pointer-events-auto">
+                        <div>
+                            <span class="text-slate-400">t =</span>
+                            <span id="valTime" class="text-white font-semibold">0.00</span><span class="text-slate-500"> s</span>
+                        </div>
+                        <div class="h-3 w-[1px] bg-slate-700"></div>
+                        <div>
+                            <span class="text-indigo-400">r =</span>
+                            <span id="valR" class="text-white">1.50</span><span class="text-slate-500"> m</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-400">θ =</span>
+                            <span id="valTheta" class="text-white">0.52</span><span class="text-slate-500"> rad</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lienzo HTML5 -->
+                <div id="canvasContainer" class="relative w-full flex-1 cursor-grab active:cursor-grabbing">
+                    <canvas id="simCanvas" class="block w-full h-full"></canvas>
+                </div>
+
+                <!-- Leyenda inferior flotante en el lienzo -->
+                <div class="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+                    <div class="bg-slate-900/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl text-[11px] text-slate-300 flex items-center gap-2 pointer-events-auto">
+                        <i class="fa-solid fa-hand-pointer text-indigo-400 animate-pulse"></i>
+                        <span>Arrastra la masa <b class="text-white">m</b> directamente en el lienzo para fijar <span class="math-serif">(r₀, θ₀)</span></span>
+                    </div>
+
+                    <!-- Conmutadores visuales -->
+                    <div class="bg-slate-900/85 backdrop-blur-md border border-slate-800 px-2.5 py-1 rounded-xl text-xs flex items-center gap-3 pointer-events-auto">
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none text-slate-300 hover:text-white">
+                            <input type="checkbox" id="chkCoords" checked class="rounded text-indigo-600 focus:ring-0">
+                            <span>Cotas <span class="math-serif">(r, θ)</span></span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none text-slate-300 hover:text-white">
+                            <input type="checkbox" id="chkEquilibrium" checked class="rounded text-indigo-600 focus:ring-0">
+                            <span>Arco <span class="math-serif">l₀</span></span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none text-slate-300 hover:text-white">
+                            <input type="checkbox" id="chkVelocity" class="rounded text-indigo-600 focus:ring-0">
+                            <span>Vector <span class="math-serif"><b>v</b></span></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Inferior: Telemetría Energética y Conservación (Teorema 1.1) -->
+            <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-indigo-400 text-sm"></i>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">
+                            Evolución Temporal de Energías y Funcional Acción
+                        </h2>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span>
+                            <span class="text-slate-400">Cinética K:</span>
+                            <b id="telemetryK" class="text-cyan-300">0.00 J</b>
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                            <span class="text-slate-400">Potencial V:</span>
+                            <b id="telemetryV" class="text-amber-300">0.00 J</b>
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                            <span class="text-slate-400">Total E = K+V:</span>
+                            <b id="telemetryE" class="text-emerald-300">0.00 J</b>
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-400 inline-block"></span>
+                            <span class="text-slate-400">Lagrangiano L = K−V:</span>
+                            <b id="telemetryL" class="text-fuchsia-300">0.00 J</b>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                    <!-- Gráfica histórica de K, V, E -->
+                    <div class="md:col-span-3 h-28 bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-hidden relative">
+                        <canvas id="energyCanvas" class="w-full h-full block"></canvas>
+                    </div>
+
+                    <!-- Caja de precisión numérica RK4 y Acción S[x] -->
+                    <div class="bg-slate-950/80 rounded-xl border border-slate-800/80 p-3 flex flex-col justify-between h-28 text-xs">
+                        <div>
+                            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                                <span>Deriva energética <span class="math-serif">|ΔE|</span>:</span>
+                                <span class="text-[10px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">RK4</span>
+                            </div>
+                            <div id="telemetryDrift" class="font-mono text-emerald-400 font-semibold mt-0.5">
+                                0.000000 J
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800/80 pt-1.5">
+                            <div class="text-[11px] text-slate-400">
+                                Acción acumulada <span class="math-serif">S = ∫ L dt</span>:
+                            </div>
+                            <div id="telemetryAction" class="font-mono text-fuchsia-300 font-semibold mt-0.5">
+                                0.00 J·s
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: PRESETS, CONTROLES Y MARCO MATEMÁTICO (4 cols en LG) -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
+
+            <!-- 1. Casos Preconfigurados (Presets para el TFG) -->
+            <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-xl">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-2.5 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Regímenes Dinámicos Destacados</span>
+                </h2>
+                <div class="grid grid-cols-1 gap-1.5">
+                    <button data-preset="resonance" class="preset-btn text-left px-3 py-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 transition flex items-center justify-between group">
+                        <div>
+                            <div class="text-xs font-semibold text-white group-hover:text-indigo-300">
+                                1. Resonancia Autoparamétrica 2:1
+                            </div>
+                            <div class="text-[11px] text-slate-400">
+                                <span class="math-serif">ω<sub>r</sub> ≈ 2ω<sub>θ</sub></span>: El rebote vertical se transfiere al balanceo
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-indigo-400"></i>
+                    </button>
+
+                    <button data-preset="rosette" class="preset-btn text-left px-3 py-2 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800 transition flex items-center justify-between group">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-indigo-300">
+                                2. Órbita Cuasiperiódica (Roseta)
+                            </div>
+                            <div class="text-[11px] text-slate-400">
+                                Frecuencias inconmensurables que densifican el plano
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-500 group-hover:text-indigo-400"></i>
+                    </button>
+
+                    <button data-preset="chaos" class="preset-btn text-left px-3 py-2 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800 transition flex items-center justify-between group">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-200 group-hover:text-indigo-300">
+                                3. Régimen Fuertemente No Lineal / Caótico
+                            </div>
+                            <div class="text-[11px] text-slate-400">
+                                Alta energía inicial con lazos y acoplamiento centrífugo
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-500 group-hover:text-indigo-400"></i>
+                    </button>
+
+                    <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+                        <button data-preset="harmonic1d" class="preset-btn text-left px-2.5 py-2 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800 transition">
+                            <div class="text-xs font-semibold text-slate-200">
+                                4. Límite Sección 1.1
+                            </div>
+                            <div class="text-[10px] text-slate-400">
+                                <span class="math-serif">θ = 0</span> (Oscilador 1D)
+                            </div>
+                        </button>
+                        <button data-preset="rigid" class="preset-btn text-left px-2.5 py-2 rounded-xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800 transition">
+                            <div class="text-xs font-semibold text-slate-200">
+                                5. Límite Cap. 2 (<span class="math-serif">S¹</span>)
+                            </div>
+                            <div class="text-[10px] text-slate-400">
+                                <span class="math-serif">k ≫ 1</span> (Péndulo rígido)
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Parámetros Físicos y Estilo de la Traza -->
+            <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-xl space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-indigo-400"></i>
+                        <span>Parámetros del Sistema</span>
+                    </h2>
+                    <span id="ratioFreqBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700" title="Cociente de frecuencias de pequeñas oscilaciones">
+                        ω_r / ω_θ = 2.00
+                    </span>
+                </div>
+
+                <!-- Sliders físicos -->
+                <div class="space-y-2.5 text-xs">
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-slate-300">Rigidez del muelle (<span class="math-serif">k</span>)</span>
+                            <span class="font-mono text-indigo-300"><span id="lblK">29.4</span> N/m</span>
+                        </div>
+                        <input type="range" id="sliderK" min="5" max="250" step="0.2" value="29.4" class="w-full">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">Masa (<span class="math-serif">m</span>)</span>
+                                <span class="font-mono text-indigo-300"><span id="lblM">1.0</span> kg</span>
+                            </div>
+                            <input type="range" id="sliderM" min="0.2" max="5.0" step="0.1" value="1.0" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">Long. natural (<span class="math-serif">l₀</span>)</span>
+                                <span class="font-mono text-indigo-300"><span id="lblL0">1.00</span> m</span>
+                            </div>
+                            <input type="range" id="sliderL0" min="0.4" max="2.0" step="0.05" value="1.00" class="w-full">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">Gravedad (<span class="math-serif">g</span>)</span>
+                                <span class="font-mono text-indigo-300"><span id="lblG">9.81</span> m/s²</span>
+                            </div>
+                            <input type="range" id="sliderG" min="0" max="20" step="0.05" value="9.81" class="w-full">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">Velocidad sim.</span>
+                                <span class="font-mono text-indigo-300"><span id="lblSpeed">1.0</span>×</span>
+                            </div>
+                            <input type="range" id="sliderSpeed" min="0.2" max="2.5" step="0.1" value="1.0" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuración de la Traza -->
+                <div class="border-t border-slate-800 pt-3 space-y-2.5 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-pen-nib text-amber-400"></i>
+                            <span>Configuración de la Traza</span>
+                        </span>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-indigo-300 font-medium">
+                            <input type="checkbox" id="chkInfiniteTrace" class="rounded text-indigo-600 focus:ring-0">
+                            <span>Traza permanente</span>
+                        </label>
+                    </div>
+
+                    <div id="traceLengthContainer">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-slate-400">Memoria de la estela</span>
+                            <span class="font-mono text-slate-300"><span id="lblTraceLen">1200</span> pts</span>
+                        </div>
+                        <input type="range" id="sliderTraceLen" min="100" max="4000" step="100" value="1200" class="w-full">
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 pt-1">
+                        <span class="text-slate-400">Color de traza:</span>
+                        <select id="selectTraceColor" class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500">
+                            <option value="kinetic">Mapa térmico (Energía Cinética K)</option>
+                            <option value="lagrangian">Valor del Lagrangiano (L = K − V)</option>
+                            <option value="ull">Violeta Institucional ULL (TFG)</option>
+                            <option value="royalblue">Azul Académico Clásico</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Formulación Lagrangiana (Referencia para el Capítulo 1) -->
+            <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-xl flex-1 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                            <i class="fa-solid fa-square-root-variable text-indigo-400"></i>
+                            <span>Formulación Analítica (Sección 1.2)</span>
+                        </h2>
+                        <button id="btnCopyLatex" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition flex items-center gap-1" title="Copiar código LaTeX de este ejemplo para tu capítulo 1">
+                            <i class="fa-regular fa-copy"></i>
+                            <span id="copyLatexText">Copiar LaTeX</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-3 space-y-2 text-xs leading-relaxed">
+                        <div class="text-slate-400 text-[11px]">
+                            Coordenadas generalizadas <span class="math-serif text-slate-200"><b>x</b> = (r, θ) ∈ ℝ⁺ × ℝ</span>:
+                        </div>
+                        <div class="math-serif text-sm text-indigo-200 bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-800 overflow-x-auto">
+                            L(r, θ, ṙ, θ̇) = ½ m (ṙ² + r²θ̇²) − ½ k (r − l₀)² + m g r cos θ
+                        </div>
+                        <div class="text-slate-400 text-[11px] pt-1">
+                            Sistema de Euler-Lagrange <span class="math-serif text-slate-200">d/dt (∇<sub><b>ẋ</b></sub>L) − ∇<sub><b>x</b></sub>L = <b>0</b></span>:
+                        </div>
+                        <div class="math-serif text-xs sm:text-sm text-emerald-200 bg-slate-900/90 px-2.5 py-2 rounded-lg border border-slate-800 space-y-1">
+                            <div>r̈ = r θ̇² − (k/m)(r − l₀) + g cos θ</div>
+                            <div>θ̈ = − (2 ṙ θ̇ + g sin θ) / r</div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-[11px] text-slate-400 mt-3 leading-normal">
+                    <b class="text-slate-200">Nota para tu TFG:</b> Observa que <span class="math-serif">K(r, ṙ, θ̇)</span> depende explícitamente de la posición <span class="math-serif">r</span>, originando la aceleración centrífuga <span class="math-serif">rθ̇²</span> y el término de Coriolis <span class="math-serif">2ṙθ̇</span> al derivar el Lagrangiano.
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Notificación Toast para copiado LaTeX / Captura -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
+        <i class="fa-solid fa-circle-check text-white"></i>
+        <span id="toastMessage">Acción completada</span>
+    </div>
+
+    <!-- LÓGICA FÍSICA, INTEGRACIÓN RK4 Y RENDERIZADO -->
+    <script>
+        (function() {
+            // --- ELEMENTOS DEL DOM ---
+            const simCanvas = document.getElementById('simCanvas');
+            const ctx = simCanvas.getContext('2d');
+            const canvasContainer = document.getElementById('canvasContainer');
+
+            const energyCanvas = document.getElementById('energyCanvas');
+            const eCtx = energyCanvas.getContext('2d');
+
+            // Controles
+            const btnPlayPause = document.getElementById('btnPlayPause');
+            const iconPlayPause = document.getElementById('iconPlayPause');
+            const textPlayPause = document.getElementById('textPlayPause');
+            const btnStep = document.getElementById('btnStep');
+            const btnReset = document.getElementById('btnReset');
+            const btnClearTrace = document.getElementById('btnClearTrace');
+            const btnPaperMode = document.getElementById('btnPaperMode');
+            const paperModeText = document.getElementById('paperModeText');
+            const btnExportPNG = document.getElementById('btnExportPNG');
+            const btnCopyLatex = document.getElementById('btnCopyLatex');
+
+            // Sliders y etiquetas
+            const sliderK = document.getElementById('sliderK');
+            const sliderM = document.getElementById('sliderM');
+            const sliderL0 = document.getElementById('sliderL0');
+            const sliderG = document.getElementById('sliderG');
+            const sliderSpeed = document.getElementById('sliderSpeed');
+            const sliderTraceLen = document.getElementById('sliderTraceLen');
+
+            const lblK = document.getElementById('lblK');
+            const lblM = document.getElementById('lblM');
+            const lblL0 = document.getElementById('lblL0');
+            const lblG = document.getElementById('lblG');
+            const lblSpeed = document.getElementById('lblSpeed');
+            const lblTraceLen = document.getElementById('lblTraceLen');
+            const ratioFreqBadge = document.getElementById('ratioFreqBadge');
+
+            // Checkboxes & Selects
+            const chkCoords = document.getElementById('chkCoords');
+            const chkEquilibrium = document.getElementById('chkEquilibrium');
+            const chkVelocity = document.getElementById('chkVelocity');
+            const chkInfiniteTrace = document.getElementById('chkInfiniteTrace');
+            const selectTraceColor = document.getElementById('selectTraceColor');
+            const traceLengthContainer = document.getElementById('traceLengthContainer');
+
+            // Lecturas numéricas
+            const valTime = document.getElementById('valTime');
+            const valR = document.getElementById('valR');
+            const valTheta = document.getElementById('valTheta');
+            const telemetryK = document.getElementById('telemetryK');
+            const telemetryV = document.getElementById('telemetryV');
+            const telemetryE = document.getElementById('telemetryE');
+            const telemetryL = document.getElementById('telemetryL');
+            const telemetryDrift = document.getElementById('telemetryDrift');
+            const telemetryAction = document.getElementById('telemetryAction');
+
+            // --- ESTADO DEL SISTEMA MECÁNICO ---
+            let params = {
+                m: 1.0,        // Masa (kg)
+                k: 29.43,      // Rigidez del muelle (N/m) -> Para resonancia 2:1 con l0=1, g=9.81: r_eq = 1 + 9.81/29.43 = 1.333m. w_r^2 = 29.43, w_theta^2 = 9.81/1.333 = 7.3575 -> w_r/w_theta = 2.00!
+                l0: 1.0,       // Longitud natural (m)
+                g: 9.81,       // Gravedad (m/s^2)
+                simSpeed: 1.0, // Factor de velocidad temporal
+                maxTrace: 1200,// Puntos máximos de traza si no es infinita
+                infiniteTrace: false,
+                traceColorMode: 'kinetic',
+                paperMode: false // Modo fondo blanco para LaTeX
+            };
+
+            // Condiciones iniciales guardadas para el botón Reiniciar
+            let initialState = {
+                r: 1.65,
+                theta: 0.08,   // Pequeña perturbación angular para que arranque la resonancia 2:1
+                dr: 0.0,
+                dtheta: 0.0
+            };
+
+            // Estado dinámico actual (r, theta, dr/dt, dtheta/dt)
+            let state = {
+                r: initialState.r,
+                theta: initialState.theta,
+                dr: initialState.dr,
+                dtheta: initialState.dtheta,
+                t: 0.0,
+                actionS: 0.0,
+                initialEnergy: 0.0
+            };
+
+            let isRunning = true;
+            let isDragging = false;
+
+            // Historial de la traza en el plano e historial energético
+            let tracePoints = []; // [{x, y, K, L}]
+            let energyHistory = []; // [{K, V, E}]
+            const MAX_ENERGY_POINTS = 260;
+
+            // Geometría de proyección en pantalla
+            let pivotX = 0;
+            let pivotY = 0;
+            let scalePxPerMeter = 175; // Píxeles por metro
+
+            // --- FUNCIONES MATEMÁTICAS DEL SISTEMA (EULER-LAGRANGE Y ENERGÍAS) ---
+
+            /**
+             * Calcula el estado de equilibrio estático estable (theta = 0, r_eq = l0 + mg/k)
+             */
+            function getEquilibriumLength() {
+                return params.l0 + (params.m * params.g) / params.k;
+            }
+
+            /**
+             * Actualiza la insignia de cociente de frecuencias de pequeñas oscilaciones:
+             * omega_r = sqrt(k/m)
+             * omega_theta = sqrt(g / r_eq)
+             */
+            function updateFrequencyRatioBadge() {
+                const rEq = getEquilibriumLength();
+                const omegaR = Math.sqrt(params.k / params.m);
+                const omegaTheta = params.g > 0 ? Math.sqrt(params.g / rEq) : 0;
+                const ratio = omegaTheta > 0 ? (omegaR / omegaTheta).toFixed(2) : '∞';
+                ratioFreqBadge.textContent = `ω_r / ω_θ = ${ratio}`;
+            }
+
+            /**
+             * Calcula las derivadas del vector de estado Y = [r, theta, dr, dtheta]
+             * aplicando las ecuaciones exactas de Euler-Lagrange:
+             *   d²r/dt² = r * dtheta² - (k/m)*(r - l0) + g*cos(theta)
+             *   d²theta/dt² = -(2 * dr * dtheta + g*sin(theta)) / r
+             */
+            function derivatives(s) {
+                const rSafe = Math.max(s.r, 0.05); // Evitar singularidad en r -> 0
+                const ddr = rSafe * (s.dtheta * s.dtheta) - (params.k / params.m) * (rSafe - params.l0) + params.g * Math.cos(s.theta);
+                const ddtheta = -(2.0 * s.dr * s.dtheta + params.g * Math.sin(s.theta)) / rSafe;
+                return {
+                    dr: s.dr,
+                    dtheta: s.dtheta,
+                    ddr: ddr,
+                    ddtheta: ddtheta
+                };
+            }
+
+            /**
+             * Un paso de integración numérica mediante Runge-Kutta de 4.º orden (RK4)
+             */
+            function rk4Step(dt) {
+                const k1 = derivatives(state);
+
+                const s2 = {
+                    r: state.r + 0.5 * dt * k1.dr,
+                    theta: state.theta + 0.5 * dt * k1.dtheta,
+                    dr: state.dr + 0.5 * dt * k1.ddr,
+                    dtheta: state.dtheta + 0.5 * dt * k1.ddtheta
+                };
+                const k2 = derivatives(s2);
+
+                const s3 = {
+                    r: state.r + 0.5 * dt * k2.dr,
+                    theta: state.theta + 0.5 * dt * k2.dtheta,
+                    dr: state.dr + 0.5 * dt * k2.ddr,
+                    dtheta: state.dtheta + 0.5 * dt * k2.ddtheta
+                };
+                const k3 = derivatives(s3);
+
+                const s4 = {
+                    r: state.r + dt * k3.dr,
+                    theta: state.theta + dt * k3.dtheta,
+                    dr: state.dr + dt * k3.ddr,
+                    dtheta: state.dtheta + dt * k3.ddtheta
+                };
+                const k4 = derivatives(s4);
+
+                state.r += (dt / 6.0) * (k1.dr + 2.0 * k2.dr + 2.0 * k3.dr + k4.dr);
+                state.theta += (dt / 6.0) * (k1.dtheta + 2.0 * k2.dtheta + 2.0 * k3.dtheta + k4.dtheta);
+                state.dr += (dt / 6.0) * (k1.ddr + 2.0 * k2.ddr + 2.0 * k3.ddr + k4.ddr);
+                state.dtheta += (dt / 6.0) * (k1.ddtheta + 2.0 * k2.ddtheta + 2.0 * k3.ddtheta + k4.ddtheta);
+
+                // Evitar colapso físico si el muelle pasa por el origen
+                if (state.r < 0.06) {
+                    state.r = 0.06;
+                    state.dr = Math.abs(state.dr);
+                }
+
+                state.t += dt;
+
+                // Acumular funcional Acción S = \int L dt
+                const energies = computeEnergies(state);
+                state.actionS += energies.L * dt;
+            }
+
+            /**
+             * Calcula la Energía Cinética K, Potencial V (referenciada para visualización clara y exacta),
+             * Energía Total E = K + V y Lagrangiano L = K - V.
+             * Nota: Tomamos como nivel de referencia V_ref el mínimo absoluto en el punto de equilibrio
+             * o bien V(r,theta) = 1/2 k (r - l0)^2 - m g r cos(theta) + m g l0 para que los valores sean positivos.
+             */
+            function computeEnergies(s) {
+                const K = 0.5 * params.m * (s.dr * s.dr + (s.r * s.dtheta) * (s.r * s.dtheta));
+                // Potencial clásico + constante aditiva C = m*g*r_eq - 0.5*k*(r_eq - l0)^2 (como se demuestra en la Ec. 1.5 del TFG, sumar C no altera Euler-Lagrange)
+                const rEq = getEquilibriumLength();
+                const vMin = 0.5 * params.k * Math.pow(rEq - params.l0, 2) - params.m * params.g * rEq;
+                const V_raw = 0.5 * params.k * Math.pow(s.r - params.l0, 2) - params.m * params.g * s.r * Math.cos(s.theta);
+                const V = V_raw - vMin; // Así V >= 0 siempre y V(r_eq, 0) = 0
+                const E = K + V;
+                const L = K - V;
+                return { K, V, E, L };
+            }
+
+            /**
+             * Convierte coordenadas polares (r, theta) a cartesianas del lienzo (x, y)
+             * Recordatorio: theta se mide desde la vertical hacia abajo (eje Y positivo hacia abajo en pantalla)
+             */
+            function polarToScreen(r, theta) {
+                return {
+                    x: pivotX + r * scalePxPerMeter * Math.sin(theta),
+                    y: pivotY + r * scalePxPerMeter * Math.cos(theta)
+                };
+            }
+
+            /**
+             * Convierte coordenadas de pantalla (x, y) a polares (r, theta)
+             */
+            function screenToPolar(x, y) {
+                const dx = x - pivotX;
+                const dy = y - pivotY;
+                const r = Math.max(0.15, Math.hypot(dx, dy) / scalePxPerMeter);
+                const theta = Math.atan2(dx, dy);
+                return { r, theta };
+            }
+
+            /**
+             * Registra el punto actual en la traza
+             */
+            function pushTracePoint() {
+                const energies = computeEnergies(state);
+                // Guardamos en coordenadas físicas (x_m, y_m) en metros para que si se redimensiona la ventana la traza no se descuadre
+                const xm = state.r * Math.sin(state.theta);
+                const ym = state.r * Math.cos(state.theta);
+
+                tracePoints.push({
+                    xm,
+                    ym,
+                    K: energies.K,
+                    L: energies.L,
+                    E: Math.max(state.initialEnergy, 0.01)
+                });
+
+                if (!params.infiniteTrace && tracePoints.length > params.maxTrace) {
+                    tracePoints.splice(0, tracePoints.length - params.maxTrace);
+                }
+            }
+
+            /**
+             * Reinicia la simulación al estado inicial configurado
+             */
+            function resetSimulation() {
+                state.r = initialState.r;
+                state.theta = initialState.theta;
+                state.dr = initialState.dr;
+                state.dtheta = initialState.dtheta;
+                state.t = 0.0;
+                state.actionS = 0.0;
+
+                const e0 = computeEnergies(state);
+                state.initialEnergy = e0.E;
+
+                tracePoints = [];
+                energyHistory = [];
+                pushTracePoint();
+                updateTelemetryUI();
+            }
+
+            // --- AJUSTE RESPONSIVO DE LOS LIENZOS ---
+            function resizeCanvases() {
+                const rect = canvasContainer.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                simCanvas.width = rect.width * dpr;
+                simCanvas.height = rect.height * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+                pivotX = rect.width * 0.5;
+                pivotY = rect.height * 0.24; // Punto de anclaje superior
+                scalePxPerMeter = Math.min(rect.width, rect.height) * 0.34;
+
+                const eRect = energyCanvas.parentElement.getBoundingClientRect();
+                energyCanvas.width = eRect.width * dpr;
+                energyCanvas.height = eRect.height * dpr;
+                eCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            window.addEventListener('resize', resizeCanvases);
+
+            // --- DIBUJO DEL MUELLE REALISTA EN ZIGZAG ---
+            function drawSpring(x1, y1, x2, y2, coils = 16, radius = 9) {
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const len = Math.hypot(dx, dy);
+                if (len < 1e-3) return;
+
+                const ux = dx / len;
+                const uy = dy / len;
+                // Vector normal perpendicular
+                const nx = -uy;
+                const ny = ux;
+
+                const leadEnd = Math.min(18, len * 0.12); // Tramos rectos en los extremos
+                const activeLen = len - 2 * leadEnd;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                // Primer tramo recto desde el anclaje
+                const startX = x1 + ux * leadEnd;
+                const startY = y1 + uy * leadEnd;
+                ctx.lineTo(startX, startY);
+
+                // Espiras del muelle
+                const totalSteps = coils * 2;
+                for (let i = 1; i <= totalSteps; i++) {
+                    const progress = (i - 0.5) / totalSteps;
+                    const side = (i % 2 === 0) ? 1 : -1;
+                    const px = startX + ux * (activeLen * progress) + nx * (radius * side);
+                    const py = startY + uy * (activeLen * progress) + ny * (radius * side);
+                    ctx.lineTo(px, py);
+                }
+
+                // Último punto antes del tramo final
+                const endSpiralX = startX + ux * activeLen;
+                const endSpiralY = startY + uy * activeLen;
+                ctx.lineTo(endSpiralX, endSpiralY);
+                ctx.lineTo(x2, y2);
+
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = params.paperMode ? 2.2 : 2.5;
+                ctx.strokeStyle = params.paperMode ? '#334155' : '#cbd5e1';
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // --- COLOR DE LA TRAZA SEGÚN MODO ---
+            function getTraceSegmentColor(pt, alpha) {
+                if (params.traceColorMode === 'ull') {
+                    return `rgba(87, 1, 140, ${alpha})`; // Color institucional ULL
+                }
+                if (params.traceColorMode === 'royalblue') {
+                    return params.paperMode
+                        ? `rgba(0, 87, 146, ${alpha})`
+                        : `rgba(56, 189, 248, ${alpha})`;
+                }
+                if (params.traceColorMode === 'lagrangian') {
+                    // Azul para L < 0 (domina potencial V), Fucsia/Ámbar para L > 0 (domina cinética K)
+                    const norm = Math.tanh(pt.L / (pt.E || 1));
+                    const hue = 210 - norm * 165; // de 210 (azul) a 45 (dorado) o 330 (fucsia)
+                    const lightness = params.paperMode ? '42%' : '60%';
+                    return `hsla(${hue}, 90%, ${lightness}, ${alpha})`;
+                }
+                // Por defecto: Mapa térmico según Energía Cinética K / E
+                const ratio = Math.min(1, Math.max(0, pt.K / (pt.E || 1)));
+                // De índigo/cian (lento, K≈0) a ámbar/coral brillante (rápido, K máximo)
+                const hue = 235 - ratio * 215;
+                const lightness = params.paperMode ? '45%' : '58%';
+                return `hsla(${hue}, 92%, ${lightness}, ${alpha})`;
+            }
+
+            // --- RENDERIZADO PRINCIPAL DEL LIENZO ---
+            function renderSimulation() {
+                const width = simCanvas.width / (window.devicePixelRatio || 1);
+                const height = simCanvas.height / (window.devicePixelRatio || 1);
+
+                ctx.clearRect(0, 0, width, height);
+
+                // 1. Fondo (Oscuro o Blanco Académico LaTeX)
+                if (params.paperMode) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
+                } else {
+                    const bgGrad = ctx.createRadialGradient(pivotX, pivotY + 100, 20, pivotX, pivotY + 100, Math.max(width, height) * 0.75);
+                    bgGrad.addColorStop(0, '#0f172a');
+                    bgGrad.addColorStop(1, '#020617');
+                    ctx.fillStyle = bgGrad;
+                    ctx.fillRect(0, 0, width, height);
+                }
+
+                // 2. Cuadrícula polar/cartesiana sutil
+                ctx.save();
+                ctx.strokeStyle = params.paperMode ? 'rgba(148, 163, 184, 0.25)' : 'rgba(51, 65, 85, 0.35)';
+                ctx.lineWidth = 1;
+                const gridStep = scalePxPerMeter * 0.5; // Cada 0.5 metros
+                for (let x = pivotX % gridStep; x < width; x += gridStep) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                for (let y = pivotY % gridStep; y < height; y += gridStep) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+
+                // Eje vertical de referencia (theta = 0)
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = params.paperMode ? 'rgba(100, 116, 139, 0.55)' : 'rgba(148, 163, 184, 0.3)';
+                ctx.beginPath();
+                ctx.moveTo(pivotX, pivotY);
+                ctx.lineTo(pivotX, height - 20);
+                ctx.stroke();
+                ctx.restore();
+
+                // 3. Circunferencias de longitud natural l0 y equilibrio r_eq
+                if (chkEquilibrium.checked) {
+                    ctx.save();
+                    // Circunferencia l0
+                    ctx.setLineDash([4, 4]);
+                    ctx.strokeStyle = params.paperMode ? 'rgba(99, 102, 241, 0.45)' : 'rgba(129, 140, 248, 0.28)';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(pivotX, pivotY, params.l0 * scalePxPerMeter, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Punto de equilibrio estable (r_eq, theta=0)
+                    const rEqPx = getEquilibriumLength() * scalePxPerMeter;
+                    ctx.fillStyle = params.paperMode ? '#059669' : '#34d399';
+                    ctx.beginPath();
+                    ctx.arc(pivotX, pivotY + rEqPx, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.font = '11px "STIX Two Math", serif';
+                    ctx.fillText('r_eq', pivotX + 7, pivotY + rEqPx + 4);
+                    ctx.restore();
+                }
+
+                // 4. DIBUJO DE LA TRAZA HISTÓRICA
+                if (tracePoints.length > 1) {
+                    ctx.save();
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    const n = tracePoints.length;
+
+                    for (let i = 1; i < n; i++) {
+                        const p0 = tracePoints[i - 1];
+                        const p1 = tracePoints[i];
+
+                        const x0 = pivotX + p0.xm * scalePxPerMeter;
+                        const y0 = pivotY + p0.ym * scalePxPerMeter;
+                        const x1 = pivotX + p1.xm * scalePxPerMeter;
+                        const y1 = pivotY + p1.ym * scalePxPerMeter;
+
+                        const alpha = params.infiniteTrace
+                            ? (params.paperMode ? 0.85 : 0.78)
+                            : Math.pow(i / n, 1.35) * 0.92;
+
+                        ctx.strokeStyle = getTraceSegmentColor(p1, alpha);
+                        ctx.lineWidth = params.paperMode ? 2.0 : 2.3;
+                        ctx.beginPath();
+                        ctx.moveTo(x0, y0);
+                        ctx.lineTo(x1, y1);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+
+                // Posición actual de la masa en pantalla
+                const massPos = polarToScreen(state.r, state.theta);
+
+                // 5. COTAS GEOMÉTRICAS (r, theta) ESTILO TIKZ / MATHCHA
+                if (chkCoords.checked) {
+                    ctx.save();
+                    const arcRadius = Math.min(58, state.r * scalePxPerMeter * 0.45);
+                    if (Math.abs(state.theta) > 0.03 && arcRadius > 18) {
+                        ctx.beginPath();
+                        // En canvas el ángulo 0 es hacia la derecha (+X) y PI/2 es hacia abajo (+Y)
+                        const startAngle = Math.PI / 2;
+                        const endAngle = Math.PI / 2 - state.theta;
+                        ctx.arc(pivotX, pivotY, arcRadius, startAngle, endAngle, state.theta > 0);
+                        ctx.strokeStyle = params.paperMode ? '#d97706' : '#fbbf24';
+                        ctx.lineWidth = 1.6;
+                        ctx.stroke();
+
+                        // Etiqueta theta
+                        const midAngle = Math.PI / 2 - state.theta * 0.5;
+                        const lblX = pivotX + (arcRadius + 14) * Math.cos(midAngle);
+                        const lblY = pivotY + (arcRadius + 14) * Math.sin(midAngle);
+                        ctx.fillStyle = params.paperMode ? '#b45309' : '#fde68a';
+                        ctx.font = 'italic 15px "STIX Two Math", serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('θ', lblX, lblY);
+                    }
+
+                    // Etiqueta r junto al muelle
+                    const midSpringX = (pivotX + massPos.x) * 0.5;
+                    const midSpringY = (pivotY + massPos.y) * 0.5;
+                    const normalOffset = 20;
+                    const nx = Math.cos(state.theta) * normalOffset;
+                    const ny = -Math.sin(state.theta) * normalOffset;
+
+                    ctx.fillStyle = params.paperMode ? '#4338ca' : '#a5b4fc';
+                    ctx.font = 'italic 15px "STIX Two Math", serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`r(t)`, midSpringX + nx, midSpringY + ny);
+                    ctx.restore();
+                }
+
+                // 6. VECTOR VELOCIDAD (SI ESTÁ ACTIVADO)
+                if (chkVelocity.checked) {
+                    const vx = state.dr * Math.sin(state.theta) + state.r * state.dtheta * Math.cos(state.theta);
+                    const vy = state.dr * Math.cos(state.theta) - state.r * state.dtheta * Math.sin(state.theta);
+                    const vScale = 22;
+                    const tipX = massPos.x + vx * vScale;
+                    const tipY = massPos.y + vy * vScale;
+
+                    if (Math.hypot(vx, vy) > 0.05) {
+                        ctx.save();
+                        ctx.strokeStyle = '#10b981';
+                        ctx.fillStyle = '#10b981';
+                        ctx.lineWidth = 2.2;
+                        ctx.beginPath();
+                        ctx.moveTo(massPos.x, massPos.y);
+                        ctx.lineTo(tipX, tipY);
+                        ctx.stroke();
+
+                        // Punta de flecha
+                        const ang = Math.atan2(tipY - massPos.y, tipX - massPos.x);
+                        ctx.beginPath();
+                        ctx.moveTo(tipX, tipY);
+                        ctx.lineTo(tipX - 8 * Math.cos(ang - 0.4), tipY - 8 * Math.sin(ang - 0.4));
+                        ctx.lineTo(tipX - 8 * Math.cos(ang + 0.4), tipY - 8 * Math.sin(ang + 0.4));
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+
+                // 7. SOPORTE FIJO SUPERIOR (TECHO MECÁNICO)
+                ctx.save();
+                ctx.strokeStyle = params.paperMode ? '#1e293b' : '#94a3b8';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(pivotX - 36, pivotY);
+                ctx.lineTo(pivotX + 36, pivotY);
+                ctx.stroke();
+
+                // Rayado oblicuo clásico de empotramiento en diagramas de física
+                ctx.lineWidth = 1.3;
+                for (let hx = -30; hx <= 30; hx += 8) {
+                    ctx.beginPath();
+                    ctx.moveTo(pivotX + hx, pivotY);
+                    ctx.lineTo(pivotX + hx - 6, pivotY - 8);
+                    ctx.stroke();
+                }
+                ctx.restore();
+
+                // 8. MUELLE ELÁSTICO
+                drawSpring(pivotX, pivotY, massPos.x, massPos.y, 16, 9);
+
+                // Articulación en el origen O(0,0)
+                ctx.save();
+                ctx.fillStyle = params.paperMode ? '#0f172a' : '#f8fafc';
+                ctx.beginPath();
+                ctx.arc(pivotX, pivotY, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 9. PARTÍCULA DE MASA m
+                const massRadius = Math.max(11, Math.min(20, 11 + params.m * 2.2));
+                ctx.save();
+                if (!params.paperMode) {
+                    ctx.shadowColor = 'rgba(99, 102, 241, 0.55)';
+                    ctx.shadowBlur = isDragging ? 22 : 14;
+                }
+
+                const sphereGrad = ctx.createRadialGradient(
+                    massPos.x - massRadius * 0.3,
+                    massPos.y - massRadius * 0.3,
+                    massRadius * 0.1,
+                    massPos.x,
+                    massPos.y,
+                    massRadius
+                );
+                if (params.paperMode) {
+                    sphereGrad.addColorStop(0, '#8b5cf6');
+                    sphereGrad.addColorStop(1, '#57018c'); // Color ULL
+                } else {
+                    sphereGrad.addColorStop(0, '#a5b4fc');
+                    sphereGrad.addColorStop(0.5, '#6366f1');
+                    sphereGrad.addColorStop(1, '#312e81');
+                }
+
+                ctx.fillStyle = sphereGrad;
+                ctx.beginPath();
+                ctx.arc(massPos.x, massPos.y, massRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = params.paperMode ? '#1e1b4b' : '#e0e7ff';
+                ctx.stroke();
+
+                // Etiqueta "m" dentro o al lado de la masa
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'italic bold 12px "STIX Two Math", serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('m', massPos.x, massPos.y);
+                ctx.restore();
+            }
+
+            // --- RENDERIZADO DE LA GRÁFICA DE ENERGÍAS (K, V, E) ---
+            function renderEnergyChart() {
+                const width = energyCanvas.width / (window.devicePixelRatio || 1);
+                const height = energyCanvas.height / (window.devicePixelRatio || 1);
+
+                eCtx.clearRect(0, 0, width, height);
+
+                if (energyHistory.length < 2) return;
+
+                // Encontrar escala máxima de energía
+                let maxE = 0.1;
+                for (let i = 0; i < energyHistory.length; i++) {
+                    if (energyHistory[i].E > maxE) maxE = energyHistory[i].E;
+                }
+                maxE *= 1.18;
+
+                const padTop = 10;
+                const padBottom = 10;
+                const plotH = height - padTop - padBottom;
+
+                function drawCurve(prop, color, lineWidth = 1.8) {
+                    eCtx.save();
+                    eCtx.strokeStyle = color;
+                    eCtx.lineWidth = lineWidth;
+                    eCtx.beginPath();
+                    for (let i = 0; i < energyHistory.length; i++) {
+                        const x = (i / (MAX_ENERGY_POINTS - 1)) * width;
+                        const val = energyHistory[i][prop];
+                        const y = height - padBottom - (val / maxE) * plotH;
+                        if (i === 0) eCtx.moveTo(x, y);
+                        else eCtx.lineTo(x, y);
+                    }
+                    eCtx.stroke();
+                    eCtx.restore();
+                }
+
+                // Energía Cinética K (Cian)
+                drawCurve('K', '#22d3ee', 1.6);
+                // Energía Potencial V (Ámbar)
+                drawCurve('V', '#fbbf24', 1.6);
+                // Energía Total E = K + V (Verde Esmeralda - Constante por el Teorema de Conservación)
+                drawCurve('E', '#34d399', 2.2);
+            }
+
+            // --- ACTUALIZACIÓN DE TELEMETRÍA NUMÉRICA ---
+            function updateTelemetryUI() {
+                valTime.textContent = state.t.toFixed(2);
+                valR.textContent = state.r.toFixed(2);
+                valTheta.textContent = state.theta.toFixed(2);
+
+                const { K, V, E, L } = computeEnergies(state);
+                telemetryK.textContent = `${K.toFixed(2)} J`;
+                telemetryV.textContent = `${V.toFixed(2)} J`;
+                telemetryE.textContent = `${E.toFixed(2)} J`;
+                telemetryL.textContent = `${L.toFixed(2)} J`;
+
+                const drift = Math.abs(E - state.initialEnergy);
+                telemetryDrift.textContent = `${drift.toFixed(6)} J`;
+                telemetryAction.textContent = `${state.actionS.toFixed(2)} J·s`;
+            }
+
+            // --- BUCLE PRINCIPAL DE ANIMACIÓN ---
+            function animateLoop() {
+                if (isRunning && !isDragging) {
+                    // Usamos 20 sub-pasos de RK4 por fotograma para garantizar conservación exacta de la energía E
+                    const totalDt = (1 / 60) * params.simSpeed;
+                    const subSteps = 20;
+                    const subDt = totalDt / subSteps;
+
+                    for (let s = 0; s < subSteps; s++) {
+                        rk4Step(subDt);
+                    }
+
+                    pushTracePoint();
+
+                    const energies = computeEnergies(state);
+                    energyHistory.push(energies);
+                    if (energyHistory.length > MAX_ENERGY_POINTS) {
+                        energyHistory.shift();
+                    }
+
+                    updateTelemetryUI();
+                }
+
+                renderSimulation();
+                renderEnergyChart();
+                requestAnimationFrame(animateLoop);
+            }
+
+            // --- INTERACCIÓN CON RATÓN Y PANTALLA TÁCTIL (ARRASTRAR MASA m) ---
+            function getPointerPos(evt) {
+                const rect = simCanvas.getBoundingClientRect();
+                const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+                const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            }
+
+            function onPointerDown(evt) {
+                const pos = getPointerPos(evt);
+                const massPos = polarToScreen(state.r, state.theta);
+                const dist = Math.hypot(pos.x - massPos.x, pos.y - massPos.y);
+
+                if (dist < 36) {
+                    isDragging = true;
+                    if (evt.cancelable) evt.preventDefault();
+                }
+            }
+
+            function onPointerMove(evt) {
+                if (!isDragging) return;
+                if (evt.cancelable) evt.preventDefault();
+
+                const pos = getPointerPos(evt);
+                const polar = screenToPolar(pos.x, pos.y);
+
+                state.r = polar.r;
+                state.theta = polar.theta;
+                state.dr = 0;
+                state.dtheta = 0;
+                state.t = 0;
+                state.actionS = 0;
+
+                // Actualizar estado inicial para que al reiniciar recuerde esta posición
+                initialState.r = state.r;
+                initialState.theta = state.theta;
+                initialState.dr = 0;
+                initialState.dtheta = 0;
+
+                const e0 = computeEnergies(state);
+                state.initialEnergy = e0.E;
+
+                tracePoints = [];
+                energyHistory = [e0];
+                pushTracePoint();
+                updateTelemetryUI();
+            }
+
+            function onPointerUp() {
+                if (isDragging) {
+                    isDragging = false;
+                }
+            }
+
+            simCanvas.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            simCanvas.addEventListener('touchstart', onPointerDown, { passive: false });
+            window.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+
+            // --- EVENTOS DE BOTONES Y CONTROLES ---
+            btnPlayPause.addEventListener('click', () => {
+                isRunning = !isRunning;
+                if (isRunning) {
+                    iconPlayPause.className = 'fa-solid fa-pause';
+                    textPlayPause.textContent = 'Pausar';
+                    btnPlayPause.className = 'px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow';
+                } else {
+                    iconPlayPause.className = 'fa-solid fa-play';
+                    textPlayPause.textContent = 'Reanudar';
+                    btnPlayPause.className = 'px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow';
+                }
+            });
+
+            btnStep.addEventListener('click', () => {
+                if (isRunning) {
+                    btnPlayPause.click(); // Pausar primero
+                }
+                const dt = 1 / 60;
+                for (let i = 0; i < 15; i++) rk4Step(dt / 15);
+                pushTracePoint();
+                energyHistory.push(computeEnergies(state));
+                if (energyHistory.length > MAX_ENERGY_POINTS) energyHistory.shift();
+                updateTelemetryUI();
+            });
+
+            btnReset.addEventListener('click', () => {
+                resetSimulation();
+            });
+
+            btnClearTrace.addEventListener('click', () => {
+                tracePoints = [];
+                pushTracePoint();
+            });
+
+            // Sliders
+            function syncSlidersUI() {
+                lblK.textContent = Number(params.k).toFixed(1);
+                lblM.textContent = Number(params.m).toFixed(1);
+                lblL0.textContent = Number(params.l0).toFixed(2);
+                lblG.textContent = Number(params.g).toFixed(2);
+                lblSpeed.textContent = Number(params.simSpeed).toFixed(1);
+                lblTraceLen.textContent = params.maxTrace;
+
+                sliderK.value = params.k;
+                sliderM.value = params.m;
+                sliderL0.value = params.l0;
+                sliderG.value = params.g;
+                sliderSpeed.value = params.simSpeed;
+                sliderTraceLen.value = params.maxTrace;
+
+                updateFrequencyRatioBadge();
+            }
+
+            sliderK.addEventListener('input', (e) => {
+                params.k = parseFloat(e.target.value);
+                state.initialEnergy = computeEnergies(state).E;
+                syncSlidersUI();
+            });
+
+            sliderM.addEventListener('input', (e) => {
+                params.m = parseFloat(e.target.value);
+                state.initialEnergy = computeEnergies(state).E;
+                syncSlidersUI();
+            });
+
+            sliderL0.addEventListener('input', (e) => {
+                params.l0 = parseFloat(e.target.value);
+                state.initialEnergy = computeEnergies(state).E;
+                syncSlidersUI();
+            });
+
+            sliderG.addEventListener('input', (e) => {
+                params.g = parseFloat(e.target.value);
+                state.initialEnergy = computeEnergies(state).E;
+                syncSlidersUI();
+            });
+
+            sliderSpeed.addEventListener('input', (e) => {
+                params.simSpeed = parseFloat(e.target.value);
+                syncSlidersUI();
+            });
+
+            sliderTraceLen.addEventListener('input', (e) => {
+                params.maxTrace = parseInt(e.target.value, 10);
+                syncSlidersUI();
+            });
+
+            chkInfiniteTrace.addEventListener('change', (e) => {
+                params.infiniteTrace = e.target.checked;
+                traceLengthContainer.style.opacity = params.infiniteTrace ? '0.4' : '1';
+                sliderTraceLen.disabled = params.infiniteTrace;
+            });
+
+            selectTraceColor.addEventListener('change', (e) => {
+                params.traceColorMode = e.target.value;
+            });
+
+            // --- PRESETS DE DEMOSTRACIÓN PARA EL TFG ---
+            const presets = {
+                // 1. Resonancia autoparamétrica 2:1 (omega_r = 2 * omega_theta)
+                resonance: {
+                    m: 1.0,
+                    k: 29.43,
+                    l0: 1.00,
+                    g: 9.81,
+                    r0: 1.68,
+                    theta0: 0.09,
+                    dr0: 0.0,
+                    dtheta0: 0.0
+                },
+                // 2. Trayectoria cuasiperiódica tipo Roseta / Lissajous radial
+                rosette: {
+                    m: 1.0,
+                    k: 55.0,
+                    l0: 1.00,
+                    g: 9.81,
+                    r0: 1.38,
+                    theta0: 0.65,
+                    dr0: 0.0,
+                    dtheta0: 1.35
+                },
+                // 3. Régimen fuertemente no lineal / Caótico
+                chaos: {
+                    m: 1.2,
+                    k: 22.0,
+                    l0: 0.90,
+                    g: 9.81,
+                    r0: 1.55,
+                    theta0: 2.15,
+                    dr0: 0.5,
+                    dtheta0: -1.2
+                },
+                // 4. Límite Sección 1.1: Oscilador armónico unidimensional (theta = 0)
+                harmonic1d: {
+                    m: 1.0,
+                    k: 35.0,
+                    l0: 1.00,
+                    g: 9.81,
+                    r0: 1.75,
+                    theta0: 0.0,
+                    dr0: 0.0,
+                    dtheta0: 0.0
+                },
+                // 5. Límite Péndulo Rígido (k muy grande -> variedad S^1 del Capítulo 2)
+                rigid: {
+                    m: 1.0,
+                    k: 250.0,
+                    l0: 1.20,
+                    g: 9.81,
+                    r0: 1.24,
+                    theta0: 1.05,
+                    dr0: 0.0,
+                    dtheta0: 0.0
+                }
+            };
+
+            const presetButtons = document.querySelectorAll('.preset-btn');
+            presetButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const key = btn.getAttribute('data-preset');
+                    const p = presets[key];
+                    if (!p) return;
+
+                    // Estilo activo en los botones
+                    presetButtons.forEach(b => {
+                        b.classList.remove('border-indigo-500/40', 'bg-indigo-500/10');
+                        b.classList.add('border-slate-800', 'bg-slate-800/40');
+                    });
+                    btn.classList.remove('border-slate-800', 'bg-slate-800/40');
+                    btn.classList.add('border-indigo-500/40', 'bg-indigo-500/10');
+
+                    params.m = p.m;
+                    params.k = p.k;
+                    params.l0 = p.l0;
+                    params.g = p.g;
+
+                    initialState = {
+                        r: p.r0,
+                        theta: p.theta0,
+                        dr: p.dr0,
+                        dtheta: p.dtheta0
+                    };
+
+                    syncSlidersUI();
+                    resetSimulation();
+                });
+            });
+
+            // --- MODO PAPEL LATEX Y EXPORTACIÓN PNG ---
+            function showToast(msg) {
+                const toast = document.getElementById('toastNotification');
+                const toastMsg = document.getElementById('toastMessage');
+                toastMsg.textContent = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 2800);
+            }
+
+            btnPaperMode.addEventListener('click', () => {
+                params.paperMode = !params.paperMode;
+                if (params.paperMode) {
+                    paperModeText.textContent = 'Modo Papel LaTeX: ON';
+                    btnPaperMode.classList.add('border-indigo-500', 'bg-indigo-950/60');
+                    showToast('Fondo blanco académico activado para exportar a tu TFG');
+                } else {
+                    paperModeText.textContent = 'Modo Papel LaTeX: OFF';
+                    btnPaperMode.classList.remove('border-indigo-500', 'bg-indigo-950/60');
+                }
+            });
+
+            btnExportPNG.addEventListener('click', () => {
+                renderSimulation();
+                const dataURL = simCanvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `pendulo_elastico_tfg_t${state.t.toFixed(0)}.png`;
+                link.href = dataURL;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('Imagen PNG descargada (lista para tu carpeta ilustraciones/)');
+            });
+
+            // Copiar fragmento LaTeX listo para pegar en chap1.tex
+            btnCopyLatex.addEventListener('click', () => {
+                const latexSnippet = `% Ejemplo: El péndulo elástico en dos grados de libertad
+Consideremos una partícula de masa $m$ sujeta al extremo de un muelle de constante elástica $k > 0$ y longitud natural $l_0$ que oscila en el plano bajo la acción de la gravedad $g$. Tomando las coordenadas generalizadas $\\vx = (r, \\theta)$, la energía cinética y la energía potencial vienen dadas por
+\\[
+K(r,\\theta,\\dot{r},\\dot{\\theta}) = \\frac{1}{2}m\\left(\\dot{r}^2 + r^2\\dot{\\theta}^2\\right), \\qquad V(r,\\theta) = \\frac{1}{2}k(r - l_0)^2 - mgr\\cos\\theta.
+\\]
+El Lagrangiano del sistema $L = K - V$ conduce, mediante las ecuaciones de Euler-Lagrange (\\ref{eq:E_L}), al sistema acoplado no lineal:
+\\[
+\\ddot{r} = r\\dot{\\theta}^2 - \\frac{k}{m}(r - l_0) + g\\cos\\theta, \\qquad \\ddot{\\theta} = -\\frac{2\\dot{r}\\dot{\\theta} + g\\sin\\theta}{r}.
+\\]`;
+
+                const textArea = document.createElement('textarea');
+                textArea.value = latexSnippet;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('Código LaTeX de la Sección 1.2 copiado al portapapeles');
+            });
+
+            // --- INICIALIZACIÓN AL CARGAR LA VENTANA ---
+            window.onload = function() {
+                resizeCanvases();
+                syncSlidersUI();
+                resetSimulation();
+                animateLoop();
+            };
+        })();
+    </script>
+</body>
+</html>
