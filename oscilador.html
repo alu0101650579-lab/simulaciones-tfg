@@ -1,0 +1,2143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oscilador Armónico Simple (1 GDL) - TFG Matemáticas</title>
+    <style>
+        :root {
+            --bg-main: #090d16;
+            --bg-card: #111827;
+            --bg-card-hover: #1f2937;
+            --border-color: #1f2937;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-purple: #9333ea;
+            --accent-purple-light: #c084fc;
+            --accent-blue: #2563eb;
+            --accent-blue-light: #38bdf8;
+            --accent-emerald: #059669;
+            --accent-emerald-light: #34d399;
+            --accent-crimson: #dc2626;
+            --accent-crimson-light: #fb7185;
+            --theme-color: #9333ea;
+            --theme-color-light: #c084fc;
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+            --font-math: 'Computer Modern', 'Georgia', 'Times New Roman', serif;
+        }
+
+        body.latex-paper {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f5f9;
+            --border-color: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Top Header */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+
+        .title-group h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .title-group p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .nav-views {
+            display: flex;
+            gap: 0.35rem;
+            background: var(--bg-main);
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .view-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.35rem;
+            font-size: 0.825rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .view-btn:hover {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .view-btn.active {
+            background: var(--theme-color);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.45rem 0.85rem;
+            border-radius: 0.4rem;
+            font-size: 0.825rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .btn:hover {
+            background-color: var(--bg-card-hover);
+            border-color: var(--text-muted);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background-color: var(--theme-color);
+            border-color: var(--theme-color);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--theme-color-light);
+            border-color: var(--theme-color-light);
+            color: #000;
+        }
+
+        .btn-latex.active {
+            background-color: #0f172a;
+            color: #ffffff;
+            border-color: #334155;
+        }
+        body.latex-paper .btn-latex.active {
+            background-color: #e2e8f0;
+            color: #0f172a;
+            border-color: #64748b;
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            flex: 1;
+            overflow: hidden;
+            height: calc(100vh - 65px);
+        }
+
+        @media (max-width: 1024px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+                height: auto;
+                overflow: visible;
+            }
+        }
+
+        /* Controls Sidebar */
+        .sidebar {
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .control-group {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 0.6rem;
+            padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .control-group h3 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--theme-color-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .preset-select {
+            width: 100%;
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 0.4rem;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .slider-val {
+            font-family: var(--font-mono);
+            color: var(--theme-color-light);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--theme-color);
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.825rem;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .color-picker-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .color-dot {
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .color-dot:hover {
+            transform: scale(1.15);
+        }
+
+        .color-dot.active {
+            border-color: #ffffff;
+            box-shadow: 0 0 8px rgba(255,255,255,0.4);
+        }
+
+        .sim-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.4rem;
+        }
+
+        .speed-selector {
+            display: flex;
+            justify-content: space-between;
+            background: var(--bg-card);
+            padding: 0.2rem;
+            border-radius: 0.4rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .speed-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .speed-btn.active {
+            background: var(--theme-color);
+            color: #ffffff;
+        }
+
+        /* Canvas Area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg-main);
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            cursor: default;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Floating Telemetry Dashboard */
+        .telemetry-card {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            border-radius: 0.6rem;
+            padding: 0.75rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-main);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            pointer-events: none;
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 0.3rem 1.25rem;
+            z-index: 5;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        body.latex-paper .telemetry-card {
+            background: rgba(255, 255, 255, 0.92);
+            color: #0f172a;
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .telemetry-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .telemetry-label {
+            color: var(--text-muted);
+        }
+        body.latex-paper .telemetry-label {
+            color: #475569;
+        }
+
+        .telemetry-val {
+            font-weight: 600;
+            color: var(--theme-color-light);
+        }
+        body.latex-paper .telemetry-val {
+            color: var(--theme-color);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 75px;
+            right: 20px;
+            background: var(--theme-color);
+            color: #ffffff;
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Variational Controls Panel (Shown only in Hamilton mode) */
+        .variational-only {
+            display: none;
+        }
+        body.mode-hamilton .variational-only {
+            display: flex;
+        }
+        body.mode-hamilton .standard-only {
+            display: none;
+        }
+        body.mode-hamilton .telemetry-card {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="title-group">
+            <h1>Oscilador Armónico Simple <span style="font-size:0.85rem; opacity:0.75; font-weight:normal;">(1 GDL)</span></h1>
+            <p>Mecánica Analítica &bull; Capítulo 1, Sección 1.1</p>
+        </div>
+
+        <nav class="nav-views">
+            <button class="view-btn active" data-view="full">🌐 Completa</button>
+            <button class="view-btn" data-view="phase">🌀 Retrato de Fases</button>
+            <button class="view-btn" data-view="energy">⚡ Energías / Lagrangiano</button>
+            <button class="view-btn" data-view="hamilton">⚖️ Principio de Hamilton</button>
+        </nav>
+
+        <div class="action-buttons">
+            <button class="btn btn-latex" id="btnLatexMode" title="Alternar entre tema oscuro y fondo claro">📄 Modo Papel</button>
+            <button class="btn" id="btnExportPng" title="Exportar figura en PNG de alta resolución">📷 Capturar PNG</button>
+            <button class="btn btn-primary" id="btnCopyLatex" title="Copiar formulación en formato LaTeX">📋 Copiar LaTeX</button>
+        </div>
+    </header>
+
+    <!-- Workspace -->
+    <div class="workspace">
+
+        <!-- Controls Sidebar -->
+        <aside class="sidebar">
+
+            <!-- Presets -->
+            <div class="control-group">
+                <h3>Casos Preconfigurados</h3>
+                <select id="presetSelect" class="preset-select">
+                    <option value="standard">1. Estándar (ω = 1 rad/s, φ = 0)</option>
+                    <option value="impulse">2. Impulso en equilibrio (x₀ = 0)</option>
+                    <option value="stiff">3. Muelle Rígido (k ≫ m, ω = 4 rad/s)</option>
+                    <option value="inertia">4. Alta Inercia (m ≫ k, ω = 0.5 rad/s)</option>
+                    <option value="hamilton_demo">5. Estudio Variacional (Acción S[x])</option>
+                </select>
+            </div>
+
+            <!-- Simulation Controls -->
+            <div class="control-group">
+                <h3>Control de Simulación</h3>
+                <div class="sim-controls">
+                    <button class="btn" id="btnPlayPause">⏸️ Pausa</button>
+                    <button class="btn" id="btnReset">🔄 Reiniciar</button>
+                    <button class="btn" id="btnClearTrace">🧹 Limpiar</button>
+                </div>
+                <div class="slider-control" style="margin-top: 0.3rem;">
+                    <div class="slider-header">
+                        <span>Velocidad de simulación:</span>
+                    </div>
+                    <div class="speed-selector">
+                        <button class="speed-btn" data-speed="0.25">0.25x</button>
+                        <button class="speed-btn" data-speed="0.5">0.5x</button>
+                        <button class="speed-btn active" data-speed="1.0">1.0x</button>
+                        <button class="speed-btn" data-speed="2.0">2.0x</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Physical Parameters (Standard) -->
+            <div class="control-group standard-only">
+                <h3>Parámetros Físicos</h3>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Masa (m):</span>
+                        <span class="slider-val" id="valMass">1.00 kg</span>
+                    </div>
+                    <input type="range" id="sliderMass" min="0.2" max="5.0" step="0.1" value="1.0">
+                </div>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Constante Elástica (k):</span>
+                        <span class="slider-val" id="valK">1.00 N/m</span>
+                    </div>
+                    <input type="range" id="sliderK" min="0.2" max="15.0" step="0.1" value="1.0">
+                </div>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Posición Inicial (x₀):</span>
+                        <span class="slider-val" id="valX0">2.00 m</span>
+                    </div>
+                    <input type="range" id="sliderX0" min="-3.0" max="3.0" step="0.1" value="2.0">
+                </div>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Velocidad Inicial (ẋ₀):</span>
+                        <span class="slider-val" id="valV0">0.00 m/s</span>
+                    </div>
+                    <input type="range" id="sliderV0" min="-5.0" max="5.0" step="0.1" value="0.0">
+                </div>
+            </div>
+
+            <!-- Variational Parameters (Hamilton Mode) -->
+            <div class="control-group variational-only">
+                <h3>Parámetros Variacionales</h3>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Parámetro de variación (ε):</span>
+                        <span class="slider-val" id="valEpsilon">0.60</span>
+                    </div>
+                    <input type="range" id="sliderEpsilon" min="-1.5" max="1.5" step="0.05" value="0.60">
+                </div>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Modo armónico (n):</span>
+                        <span class="slider-val" id="valHarmonic">1</span>
+                    </div>
+                    <input type="range" id="sliderHarmonic" min="1" max="3" step="1" value="1">
+                </div>
+
+                <div class="slider-control">
+                    <div class="slider-header">
+                        <span>Intervalo temporal (T_var):</span>
+                        <span class="slider-val" id="valTVar">4.00 s</span>
+                    </div>
+                    <input type="range" id="sliderTVar" min="0.5" max="10.0" step="0.25" value="4.0">
+                </div>
+            </div>
+
+            <!-- Visual Options & Color Palette -->
+            <div class="control-group">
+                <h3>Opciones Visuales</h3>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="chkPermanentTrace" checked> Traza permanente
+                </label>
+                <label class="checkbox-label standard-only">
+                    <input type="checkbox" id="chkShowVectors" checked> Mostrar vectores (F, ẋ)
+                </label>
+                <label class="checkbox-label standard-only">
+                    <input type="checkbox" id="chkShowAnalytical" checked> Superponer sol. analítica
+                </label>
+
+                <div style="margin-top: 0.4rem;">
+                    <span style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.4rem;">Esquema de Color:</span>
+                    <div class="color-picker-group">
+                        <div class="color-dot active" data-color="purple" style="background:#9333ea;" title="Violeta Institucional ULL"></div>
+                        <div class="color-dot" data-color="blue" style="background:#2563eb;" title="Azul Matemático"></div>
+                        <div class="color-dot" data-color="emerald" style="background:#059669;" title="Esmeralda"></div>
+                        <div class="color-dot" data-color="crimson" style="background:#dc2626;" title="Carmesí"></div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Canvas Container -->
+        <main class="main-content">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="simCanvas"></canvas>
+            </div>
+
+            <!-- Telemetry Card -->
+            <div class="telemetry-card" id="telemetryCard">
+                <div class="telemetry-item">
+                    <span class="telemetry-label">t:</span>
+                    <span class="telemetry-val" id="telT">0.00 s</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">ω:</span>
+                    <span class="telemetry-val" id="telOmega">1.00 rad/s</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">x(t):</span>
+                    <span class="telemetry-val" id="telX">2.000 m</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">T (periodo):</span>
+                    <span class="telemetry-val" id="telPeriod">6.28 s</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">ẋ(t):</span>
+                    <span class="telemetry-val" id="telV">0.000 m/s</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Amplitud A:</span>
+                    <span class="telemetry-val" id="telAmp">2.000 m</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Energía K:</span>
+                    <span class="telemetry-val" id="telK">0.000 J</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Energía V:</span>
+                    <span class="telemetry-val" id="telV_pot">2.000 J</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Energía E:</span>
+                    <span class="telemetry-val" id="telE">2.000 J</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Deriva |ΔE|:</span>
+                    <span class="telemetry-val" id="telDrift">0.00e+0 J</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Lagrangiano L:</span>
+                    <span class="telemetry-val" id="telL">-2.000 J</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="telemetry-label">Acción S[x]:</span>
+                    <span class="telemetry-val" id="telAction">0.000 J·s</span>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toastNotification">Formulación LaTeX copiada al portapapeles</div>
+
+    <script>
+        /**
+         * Simulación del Oscilador Armónico Simple (1 GDL)
+         * Integración RK4, solución analítica y estudio variacional
+         */
+
+        // State & Parameters
+        const state = {
+            m: 1.0,           // Mass (kg)
+            k: 1.0,           // Spring constant (N/m)
+            x0: 2.0,          // Initial position (m)
+            v0: 0.0,          // Initial velocity (m/s)
+
+            // Current integration state
+            t: 0,
+            x: 2.0,
+            v: 0.0,
+
+            // Analytical baseline
+            omega: 1.0,
+            A: 2.0,
+            phi: 0.0,
+            E0: 2.0,
+
+            // Accumulated Action integral S = ∫ L dt
+            actionS: 0.0,
+
+            // Variational Parameters (Hamilton view)
+            epsilon: 0.60,
+            n_harmonic: 1,
+            T_var: 4.0,
+
+            // Control flags
+            isPaused: false,
+            simSpeed: 1.0,
+            currentView: 'full', // 'full', 'phase', 'energy', 'hamilton'
+            latexMode: false,
+            permanentTrace: true,
+            showVectors: true,
+            showAnalytical: true,
+
+            // Dragging state
+            isDragging: false,
+
+            // Color Palettes
+            paletteName: 'purple',
+            colors: {
+                purple: { main: '#9333ea', light: '#c084fc', rgb: '147, 51, 234' },
+                blue: { main: '#2563eb', light: '#38bdf8', rgb: '37, 99, 235' },
+                emerald: { main: '#059669', light: '#34d399', rgb: '5, 150, 105' },
+                crimson: { main: '#dc2626', light: '#fb7185', rgb: '220, 38, 38' }
+            }
+        };
+
+        // Trajectory History for plots
+        let historyX = []; // [{t, x, v, K, V, E, L}]
+        const MAX_HISTORY = 1200;
+
+        // Canvas DOM & Context
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+
+        // Timing & Animation
+        let lastTimestamp = 0;
+        let animationFrameId = null;
+
+        // Initialize Application
+        function init() {
+            recalculateAnalytical();
+            resetSimulation();
+            setupEventListeners();
+            resizeCanvas();
+            requestAnimationFrame(simLoop);
+        }
+
+        // Recalculate theoretical variables based on parameters
+        function recalculateAnalytical() {
+            state.omega = Math.sqrt(state.k / state.m);
+            state.A = Math.sqrt(state.x0 * state.x0 + (state.v0 / state.omega) * (state.v0 / state.omega));
+            state.phi = Math.atan2(-state.v0 / state.omega, state.x0);
+            state.E0 = 0.5 * state.m * state.v0 * state.v0 + 0.5 * state.k * state.x0 * state.x0;
+        }
+
+        // Reset system to initial state
+        function resetSimulation() {
+            recalculateAnalytical();
+            state.t = 0;
+            state.x = state.x0;
+            state.v = state.v0;
+            state.actionS = 0;
+            historyX = [];
+
+            // Record initial state
+            recordHistoryStep();
+            updateTelemetry();
+        }
+
+        function clearTrace() {
+            historyX = [];
+            recordHistoryStep();
+        }
+
+        // Numerical Integration (RK4 with 20 sub-steps per frame)
+        function stepRK4(dt) {
+            if (dt <= 0) return;
+
+            const subSteps = 20;
+            const subDt = dt / subSteps;
+
+            for (let i = 0; i < subSteps; i++) {
+                // Current derivatives
+                const x_curr = state.x;
+                const v_curr = state.v;
+
+                // RK4 k1
+                const k1_x = v_curr;
+                const k1_v = -(state.k / state.m) * x_curr;
+
+                // RK4 k2
+                const x_k2 = x_curr + 0.5 * subDt * k1_x;
+                const v_k2 = v_curr + 0.5 * subDt * k1_v;
+                const k2_x = v_k2;
+                const k2_v = -(state.k / state.m) * x_k2;
+
+                // RK4 k3
+                const x_k3 = x_curr + 0.5 * subDt * k2_x;
+                const v_k3 = v_curr + 0.5 * subDt * k2_v;
+                const k3_x = v_k3;
+                const k3_v = -(state.k / state.m) * x_k3;
+
+                // RK4 k4
+                const x_k4 = x_curr + subDt * k3_x;
+                const v_k4 = v_curr + subDt * k3_v;
+                const k4_x = v_k4;
+                const k4_v = -(state.k / state.m) * x_k4;
+
+                // Update state
+                state.x += (subDt / 6.0) * (k1_x + 2 * k2_x + 2 * k3_x + k4_x);
+                state.v += (subDt / 6.0) * (k1_v + 2 * k2_v + 2 * k3_v + k4_v);
+                state.t += subDt;
+
+                // Accumulate Action integral S = ∫ (K - V) dt
+                const K_sub = 0.5 * state.m * state.v * state.v;
+                const V_sub = 0.5 * state.k * state.x * state.x;
+                const L_sub = K_sub - V_sub;
+                state.actionS += L_sub * subDt;
+            }
+
+            recordHistoryStep();
+        }
+
+        // Record history snapshot
+        function recordHistoryStep() {
+            const K = 0.5 * state.m * state.v * state.v;
+            const V = 0.5 * state.k * state.x * state.x;
+            const E = K + V;
+            const L = K - V;
+
+            historyX.push({
+                t: state.t,
+                x: state.x,
+                v: state.v,
+                K: K,
+                V: V,
+                E: E,
+                L: L
+            });
+
+            if (!state.permanentTrace && historyX.length > 250) {
+                historyX.shift();
+            } else if (historyX.length > MAX_HISTORY) {
+                historyX.shift();
+            }
+        }
+
+        // Main Animation Loop
+        function simLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            let frameTime = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            // Cap dt to prevent numerical explosion on tab switch
+            if (frameTime > 0.1) frameTime = 0.1;
+
+            if (!state.isPaused && !state.isDragging) {
+                const effectiveDt = frameTime * state.simSpeed;
+                stepRK4(effectiveDt);
+                updateTelemetry();
+            }
+
+            render();
+            animationFrameId = requestAnimationFrame(simLoop);
+        }
+
+        // Telemetry Update
+        function updateTelemetry() {
+            const K = 0.5 * state.m * state.v * state.v;
+            const V = 0.5 * state.k * state.x * state.x;
+            const E = K + V;
+            const L = K - V;
+            const drift = Math.abs(E - state.E0);
+            const period = (2 * Math.PI) / state.omega;
+
+            document.getElementById('telT').textContent = state.t.toFixed(2) + ' s';
+            document.getElementById('telOmega').textContent = state.omega.toFixed(3) + ' rad/s';
+            document.getElementById('telX').textContent = state.x.toFixed(3) + ' m';
+            document.getElementById('telPeriod').textContent = period.toFixed(2) + ' s';
+            document.getElementById('telV').textContent = state.v.toFixed(3) + ' m/s';
+            document.getElementById('telAmp').textContent = state.A.toFixed(3) + ' m';
+            document.getElementById('telK').textContent = K.toFixed(3) + ' J';
+            document.getElementById('telV_pot').textContent = V.toFixed(3) + ' J';
+            document.getElementById('telE').textContent = E.toFixed(3) + ' J';
+            document.getElementById('telDrift').textContent = drift.toExponential(2) + ' J';
+            document.getElementById('telL').textContent = L.toFixed(3) + ' J';
+            document.getElementById('telAction').textContent = state.actionS.toFixed(3) + ' J·s';
+        }
+
+        // Resizing Canvas High-DPI
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvasWrapper.getBoundingClientRect();
+
+            canvas.width = Math.floor(rect.width * dpr);
+            canvas.height = Math.floor(rect.height * dpr);
+
+            ctx.resetTransform();
+            ctx.scale(dpr, dpr);
+            render();
+        }
+
+        // Base Colors getter depending on Paper mode
+        function getCanvasColors() {
+            const theme = state.colors[state.paletteName];
+            if (state.latexMode) {
+                return {
+                    bg: '#ffffff',
+                    panelBg: '#f8fafc',
+                    grid: '#e2e8f0',
+                    axis: '#334155',
+                    text: '#0f172a',
+                    textMuted: '#64748b',
+                    main: theme.main,
+                    light: theme.light,
+                    rgb: theme.rgb,
+                    kinetic: '#dc2626',
+                    potential: '#2563eb',
+                    total: '#9333ea',
+                    spring: '#475569'
+                };
+            } else {
+                return {
+                    bg: '#090d16',
+                    panelBg: '#111827',
+                    grid: '#1f2937',
+                    axis: '#4b5563',
+                    text: '#f3f4f6',
+                    textMuted: '#9ca3af',
+                    main: theme.main,
+                    light: theme.light,
+                    rgb: theme.rgb,
+                    kinetic: '#fb7185',
+                    potential: '#38bdf8',
+                    total: '#c084fc',
+                    spring: '#94a3b8'
+                };
+            }
+        }
+
+        // RENDER ROUTER
+        function render() {
+            const w = canvasWrapper.clientWidth;
+            const h = canvasWrapper.clientHeight;
+            const c = getCanvasColors();
+
+            // Clear Background
+            ctx.fillStyle = c.bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // Font choice for paper mode
+            ctx.font = state.latexMode
+                ? '13px var(--font-math)'
+                : '12px var(--font-sans)';
+
+            switch (state.currentView) {
+                case 'full':
+                    renderFullView(w, h, c);
+                    break;
+                case 'phase':
+                    renderPhaseView(0, 0, w, h, c, true);
+                    break;
+                case 'energy':
+                    renderEnergyView(0, 0, w, h, c, true);
+                    break;
+                case 'hamilton':
+                    renderHamiltonView(0, 0, w, h, c);
+                    break;
+            }
+        }
+
+        // 1. FULL VIEW: 3 Integrated Zones
+        function renderFullView(w, h, c) {
+            const topH = Math.floor(h * 0.45);
+            const botH = h - topH;
+            const halfW = Math.floor(w * 0.5);
+
+            // Render 1D Oscillator on top
+            renderPhysicalSystem(0, 0, w, topH, c);
+
+            // Separator lines
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, topH);
+            ctx.lineTo(w, topH);
+            ctx.moveTo(halfW, topH);
+            ctx.lineTo(halfW, h);
+            ctx.stroke();
+
+            // Render Phase Space (Bottom-Left)
+            renderPhaseView(0, topH, halfW, botH, c, false);
+
+            // Render Time Series (Bottom-Right)
+            renderTimePlot(halfW, topH, w - halfW, botH, c);
+        }
+
+        // Zone 1: Physical System (1D Mass-Spring)
+        function renderPhysicalSystem(x, y, w, h, c) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Panel Background
+            ctx.fillStyle = c.panelBg;
+            ctx.fillRect(0, 0, w, h);
+
+            // Title
+            ctx.fillStyle = c.text;
+            ctx.font = state.latexMode ? 'bold 15px var(--font-math)' : 'bold 14px var(--font-sans)';
+            ctx.fillText('Sistema Físico 1D: m·ẍ + k·x = 0', 16, 26);
+
+            const wallX = 60;
+            const groundY = h * 0.65;
+            const centerX = wallX + (w - wallX) * 0.5;
+            const scaleX = (w - wallX - 120) / 7.0; // 7 meters total range (-3.5 to +3.5)
+
+            // Wall Hatching
+            ctx.fillStyle = c.axis;
+            ctx.fillRect(wallX - 12, 30, 12, groundY - 30 + 20);
+            ctx.strokeStyle = c.panelBg;
+            ctx.lineWidth = 2;
+            for (let i = 35; i < groundY + 15; i += 10) {
+                ctx.beginPath();
+                ctx.moveTo(wallX, i);
+                ctx.lineTo(wallX - 12, i + 10);
+                ctx.stroke();
+            }
+
+            // Floor / Ground Line
+            ctx.strokeStyle = c.axis;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(wallX - 15, groundY);
+            ctx.lineTo(w - 20, groundY);
+            ctx.stroke();
+
+            // Equilibrium Marker (x = 0)
+            const eqX = centerX;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = c.textMuted;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(eqX, 40);
+            ctx.lineTo(eqX, groundY + 25);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = c.textMuted;
+            ctx.textAlign = 'center';
+            ctx.fillText('x = 0 (Equilibrio)', eqX, groundY + 40);
+
+            // Amplitude Markers (-A, +A)
+            if (state.A > 0.05) {
+                const ampLeftX = centerX - state.A * scaleX;
+                const ampRightX = centerX + state.A * scaleX;
+
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+                ctx.beginPath();
+                ctx.moveTo(ampLeftX, groundY - 30);
+                ctx.lineTo(ampLeftX, groundY + 15);
+                ctx.moveTo(ampRightX, groundY - 30);
+                ctx.lineTo(ampRightX, groundY + 15);
+                ctx.stroke();
+
+                ctx.fillText('-A', ampLeftX, groundY + 28);
+                ctx.fillText('+A', ampRightX, groundY + 28);
+            }
+
+            // Mass Block dimensions & position
+            const posX = centerX + state.x * scaleX;
+            const blockW = Math.max(40, Math.min(70, 35 * Math.cbrt(state.m)));
+            const blockH = Math.max(35, Math.min(60, 30 * Math.cbrt(state.m)));
+            const blockX = posX - blockW / 2;
+            const blockY = groundY - blockH;
+
+            // Helical Spring Drawing
+            const springStartX = wallX;
+            const springEndX = blockX;
+            drawSpring(ctx, springStartX, groundY - blockH / 2, springEndX, groundY - blockH / 2, 14, 14, c.spring);
+
+            // Draw Mass Block
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 4;
+
+            ctx.fillStyle = c.main;
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = c.light;
+            ctx.beginPath();
+            ctx.roundRect(blockX, blockY, blockW, blockH, 8);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Mass Label
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 12px var(--font-sans)';
+            ctx.fillText(`m = ${state.m.toFixed(1)}kg`, posX, blockY + blockH / 2 + 4);
+
+            // Dynamic Dimension Line for x(t)
+            ctx.strokeStyle = c.light;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(eqX, blockY - 15);
+            ctx.lineTo(posX, blockY - 15);
+            ctx.stroke();
+
+            // Arrowheads for displacement
+            if (Math.abs(posX - eqX) > 10) {
+                drawArrowhead(ctx, eqX, blockY - 15, posX > eqX ? 0 : Math.PI, c.light);
+                drawArrowhead(ctx, posX, blockY - 15, posX > eqX ? Math.PI : 0, c.light);
+            }
+
+            ctx.fillStyle = c.text;
+            ctx.fillText(`x = ${state.x.toFixed(2)} m`, (eqX + posX) / 2, blockY - 22);
+
+            // Display Vectors (F = -kx, v = ẋ)
+            if (state.showVectors) {
+                const vecY = blockY + blockH / 2;
+
+                // Force Vector (Red)
+                const forceMag = -state.k * state.x;
+                const forceVecLen = forceMag * 12;
+                if (Math.abs(forceVecLen) > 5) {
+                    drawVector(ctx, posX, vecY - blockH * 0.7, forceVecLen, '#ef4444', `F = ${forceMag.toFixed(1)} N`);
+                }
+
+                // Velocity Vector (Green)
+                const velVecLen = state.v * 15;
+                if (Math.abs(velVecLen) > 5) {
+                    drawVector(ctx, posX, vecY + blockH * 0.7, velVecLen, '#10b981', `ẋ = ${state.v.toFixed(1)} m/s`);
+                }
+            }
+
+            // Save bounds for Drag & Drop detection
+            window.blockBounds = {
+                x1: blockX,
+                y1: blockY,
+                x2: blockX + blockW,
+                y2: blockY + blockH,
+                centerX: centerX,
+                scaleX: scaleX
+            };
+
+            ctx.restore();
+        }
+
+        // Draw Helical Spring
+        function drawSpring(ctx, x1, y1, x2, y2, coils, radius, color) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 10) return;
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const angle = Math.atan2(dy, dx);
+            ctx.translate(x1, y1);
+            ctx.rotate(angle);
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+
+            const leadIn = 15;
+            const leadOut = 15;
+            const coilDist = (dist - leadIn - leadOut) / coils;
+
+            ctx.lineTo(leadIn, 0);
+
+            for (let i = 0; i < coils; i++) {
+                const cx = leadIn + (i + 0.25) * coilDist;
+                const cy = -radius;
+                const nx = leadIn + (i + 0.75) * coilDist;
+                const ny = radius;
+                const ex = leadIn + (i + 1) * coilDist;
+
+                ctx.lineTo(cx, cy);
+                ctx.lineTo(nx, ny);
+                ctx.lineTo(ex, 0);
+            }
+
+            ctx.lineTo(dist, 0);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Vector Arrow Utility
+        function drawVector(ctx, fromX, fromY, length, color, label) {
+            const toX = fromX + length;
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2.5;
+
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, fromY);
+            ctx.stroke();
+
+            const angle = length >= 0 ? 0 : Math.PI;
+            drawArrowhead(ctx, toX, fromY, angle, color);
+
+            ctx.font = 'bold 11px var(--font-sans)';
+            ctx.textAlign = length >= 0 ? 'left' : 'right';
+            ctx.fillText(label, toX + (length >= 0 ? 8 : -8), fromY + 4);
+
+            ctx.restore();
+        }
+
+        function drawArrowhead(ctx, x, y, angle, color) {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-8, -4);
+            ctx.lineTo(-8, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Zone 2: Phase Space (x, ẋ)
+        function renderPhaseView(x, y, w, h, c, isFull) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            if (isFull) {
+                ctx.fillStyle = c.bg;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // Title
+            ctx.fillStyle = c.text;
+            ctx.font = state.latexMode ? 'bold 15px var(--font-math)' : 'bold 14px var(--font-sans)';
+            ctx.fillText('Retrato en Espacio de Fases (x, ẋ)', 16, 26);
+
+            const centerX = w * 0.5;
+            const centerY = h * 0.55;
+
+            // Auto scale for phase space
+            const maxValX = Math.max(3.5, state.A * 1.25);
+            const maxValV = Math.max(4.5, state.A * state.omega * 1.25);
+
+            const scaleX = (w * 0.8) / (2 * maxValX);
+            const scaleV = (h * 0.7) / (2 * maxValV);
+
+            // Grid Lines
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
+
+            // Vertical grid lines
+            for (let gx = -Math.floor(maxValX); gx <= Math.floor(maxValX); gx += 1) {
+                if (gx === 0) continue;
+                const px = centerX + gx * scaleX;
+                ctx.beginPath();
+                ctx.moveTo(px, 35);
+                ctx.lineTo(px, h - 25);
+                ctx.stroke();
+            }
+            // Horizontal grid lines
+            for (let gv = -Math.floor(maxValV); gv <= Math.floor(maxValV); gv += 1) {
+                if (gv === 0) continue;
+                const py = centerY - gv * scaleV;
+                ctx.beginPath();
+                ctx.moveTo(25, py);
+                ctx.lineTo(w - 25, py);
+                ctx.stroke();
+            }
+
+            // Main Axes (x, ẋ)
+            ctx.strokeStyle = c.axis;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(20, centerY);
+            ctx.lineTo(w - 20, centerY);
+            ctx.moveTo(centerX, h - 20);
+            ctx.lineTo(centerX, 40);
+            ctx.stroke();
+
+            // Axis Arrowheads & Labels
+            drawArrowhead(ctx, w - 20, centerY, 0, c.axis);
+            drawArrowhead(ctx, centerX, 40, -Math.PI / 2, c.axis);
+
+            ctx.fillStyle = c.text;
+            ctx.font = 'bold 13px var(--font-math)';
+            ctx.textAlign = 'left';
+            ctx.fillText('x (m)', w - 45, centerY - 10);
+            ctx.textAlign = 'center';
+            ctx.fillText('ẋ (m/s)', centerX + 25, 48);
+
+            // Theoretical Ellipse Curve (E = constant level set)
+            if (state.A > 0.01) {
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = state.latexMode ? '#94a3b8' : 'rgba(148, 163, 184, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, state.A * scaleX, (state.A * state.omega) * scaleV, 0, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Trajectory History Trace
+            if (historyX.length > 1) {
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let i = 0; i < historyX.length; i++) {
+                    const pt = historyX[i];
+                    const px = centerX + pt.x * scaleX;
+                    const py = centerY - pt.v * scaleV;
+
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+
+                if (state.permanentTrace) {
+                    ctx.strokeStyle = c.main;
+                    ctx.stroke();
+                } else {
+                    const strokeGrad = ctx.createLinearGradient(0, 0, w, h);
+                    strokeGrad.addColorStop(0, c.main);
+                    strokeGrad.addColorStop(1, c.light);
+                    ctx.strokeStyle = strokeGrad;
+                    ctx.stroke();
+                }
+            }
+
+            // Current Point State (x(t), ẋ(t))
+            const curPx = centerX + state.x * scaleX;
+            const curPy = centerY - state.v * scaleV;
+
+            // Phase Direction Tangent Vector Arrow
+            const tanX = state.v;
+            const tanV = -state.omega * state.omega * state.x;
+            const tanLen = Math.hypot(tanX * scaleX, tanV * scaleV);
+
+            if (tanLen > 2) {
+                const normTanX = (tanX * scaleX) / tanLen;
+                const normTanV = (-tanV * scaleV) / tanLen;
+                const arrowLen = 25;
+
+                ctx.strokeStyle = c.light;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(curPx, curPy);
+                ctx.lineTo(curPx + normTanX * arrowLen, curPy + normTanV * arrowLen);
+                ctx.stroke();
+
+                const angle = Math.atan2(normTanV, normTanX);
+                drawArrowhead(ctx, curPx + normTanX * arrowLen, curPy + normTanV * arrowLen, angle, c.light);
+            }
+
+            // Glow Current Point
+            ctx.save();
+            ctx.shadowColor = c.light;
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = c.light;
+            ctx.beginPath();
+            ctx.arc(curPx, curPy, 6, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+
+            // Coordinate label
+            ctx.fillStyle = c.text;
+            ctx.font = '11px var(--font-mono)';
+            ctx.textAlign = 'left';
+            ctx.fillText(`(${state.x.toFixed(2)}, ${state.v.toFixed(2)})`, curPx + 10, curPy - 10);
+
+            // Theoretical Equation Text box if full mode
+            if (isFull) {
+                ctx.fillStyle = c.panelBg;
+                ctx.strokeStyle = c.grid;
+                ctx.fillRect(30, h - 70, 320, 45);
+                ctx.strokeRect(30, h - 70, 320, 45);
+
+                ctx.fillStyle = c.text;
+                ctx.font = '13px var(--font-math)';
+                ctx.fillText(`Ecuación de la órbita:  x² / A²  +  ẋ² / (ω·A)²  =  1`, 40, h - 42);
+            }
+
+            ctx.restore();
+        }
+
+        // Zone 3: Time Plot x(t)
+        function renderTimePlot(x, y, w, h, c) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Title
+            ctx.fillStyle = c.text;
+            ctx.font = state.latexMode ? 'bold 15px var(--font-math)' : 'bold 14px var(--font-sans)';
+            ctx.fillText('Evolución Temporal x(t)', 16, 26);
+
+            const padLeft = 50;
+            const padRight = 30;
+            const padTop = 45;
+            const padBot = 35;
+            const plotW = w - padLeft - padRight;
+            const plotH = h - padTop - padBot;
+
+            // Time axis scaling (last 10 seconds)
+            const timeSpan = 10.0;
+            const minT = Math.max(0, state.t - timeSpan);
+
+            const maxY = Math.max(3.0, state.A * 1.25);
+
+            // Grid Lines
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
+
+            for (let val = -Math.floor(maxY); val <= Math.floor(maxY); val += 1) {
+                const py = padTop + plotH * (0.5 - val / (2 * maxY));
+                ctx.beginPath();
+                ctx.moveTo(padLeft, py);
+                ctx.lineTo(w - padRight, py);
+                ctx.stroke();
+
+                ctx.fillStyle = c.textMuted;
+                ctx.font = '10px var(--font-mono)';
+                ctx.textAlign = 'right';
+                ctx.fillText(val.toFixed(1), padLeft - 8, py + 3);
+            }
+
+            // Main Time Axis
+            const zeroY = padTop + plotH * 0.5;
+            ctx.strokeStyle = c.axis;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, zeroY);
+            ctx.lineTo(w - padRight, zeroY);
+            ctx.moveTo(padLeft, padTop);
+            ctx.lineTo(padLeft, h - padBot);
+            ctx.stroke();
+
+            // Overlay Analytical Solution (Dashed Golden Line)
+            if (state.showAnalytical) {
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+
+                const steps = 100;
+                for (let i = 0; i <= steps; i++) {
+                    const t_sim = minT + (i / steps) * timeSpan;
+                    const x_exact = state.A * Math.cos(state.omega * t_sim + state.phi);
+
+                    const px = padLeft + ((t_sim - minT) / timeSpan) * plotW;
+                    const py = padTop + plotH * (0.5 - x_exact / (2 * maxY));
+
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Numerical RK4 Position Curve x(t)
+            if (historyX.length > 1) {
+                ctx.strokeStyle = c.main;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                let started = false;
+
+                for (let i = 0; i < historyX.length; i++) {
+                    const pt = historyX[i];
+                    if (pt.t < minT) continue;
+
+                    const px = padLeft + ((pt.t - minT) / timeSpan) * plotW;
+                    const py = padTop + plotH * (0.5 - pt.x / (2 * maxY));
+
+                    if (!started) {
+                        ctx.moveTo(px, py);
+                        started = true;
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // Legend
+            ctx.font = '11px var(--font-sans)';
+            ctx.textAlign = 'left';
+
+            ctx.fillStyle = c.main;
+            ctx.fillRect(w - 180, 15, 12, 12);
+            ctx.fillStyle = c.text;
+            ctx.fillText('x(t) Numérico (RK4)', w - 162, 25);
+
+            if (state.showAnalytical) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(w - 180, 32, 12, 3);
+                ctx.fillStyle = c.text;
+                ctx.fillText('x(t) Exacto Analítico', w - 162, 37);
+            }
+
+            ctx.restore();
+        }
+
+        // View 3: Full Screen Energies & Lagrangian
+        function renderEnergyView(x, y, w, h, c, isFull) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            if (isFull) {
+                ctx.fillStyle = c.bg;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // Title
+            ctx.fillStyle = c.text;
+            ctx.font = state.latexMode ? 'bold 16px var(--font-math)' : 'bold 15px var(--font-sans)';
+            ctx.fillText('Conservación de Energía y Lagrangiano: L(x, ẋ) = K(ẋ) - V(x)', 20, 30);
+
+            const padLeft = 60;
+            const padRight = 40;
+            const padTop = 60;
+            const padBot = 50;
+            const plotW = w - padLeft - padRight;
+            const plotH = h - padTop - padBot;
+
+            const timeSpan = 10.0;
+            const minT = Math.max(0, state.t - timeSpan);
+
+            const maxE = Math.max(2.0, state.E0 * 1.3);
+            const minE = -maxE * 0.6;
+
+            // Grid Lines
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
+
+            for (let val = Math.floor(minE); val <= Math.ceil(maxE); val += 1) {
+                const py = padTop + plotH * (1.0 - (val - minE) / (maxE - minE));
+                ctx.beginPath();
+                ctx.moveTo(padLeft, py);
+                ctx.lineTo(w - padRight, py);
+                ctx.stroke();
+
+                ctx.fillStyle = c.textMuted;
+                ctx.font = '10px var(--font-mono)';
+                ctx.textAlign = 'right';
+                ctx.fillText(val.toFixed(1) + ' J', padLeft - 8, py + 3);
+            }
+
+            // Axes
+            const zeroY = padTop + plotH * (1.0 - (0 - minE) / (maxE - minE));
+            ctx.strokeStyle = c.axis;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, zeroY);
+            ctx.lineTo(w - padRight, zeroY);
+            ctx.moveTo(padLeft, padTop);
+            ctx.lineTo(padLeft, h - padBot);
+            ctx.stroke();
+
+            if (historyX.length > 1) {
+                // Plot Kinetic Energy K(t)
+                ctx.strokeStyle = c.kinetic;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                let started = false;
+                for (let i = 0; i < historyX.length; i++) {
+                    const pt = historyX[i];
+                    if (pt.t < minT) continue;
+                    const px = padLeft + ((pt.t - minT) / timeSpan) * plotW;
+                    const py = padTop + plotH * (1.0 - (pt.K - minE) / (maxE - minE));
+                    if (!started) { ctx.moveTo(px, py); started = true; }
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Plot Potential Energy V(t)
+                ctx.strokeStyle = c.potential;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                started = false;
+                for (let i = 0; i < historyX.length; i++) {
+                    const pt = historyX[i];
+                    if (pt.t < minT) continue;
+                    const px = padLeft + ((pt.t - minT) / timeSpan) * plotW;
+                    const py = padTop + plotH * (1.0 - (pt.V - minE) / (maxE - minE));
+                    if (!started) { ctx.moveTo(px, py); started = true; }
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Plot Total Energy E(t)
+                ctx.strokeStyle = c.total;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                started = false;
+                for (let i = 0; i < historyX.length; i++) {
+                    const pt = historyX[i];
+                    if (pt.t < minT) continue;
+                    const px = padLeft + ((pt.t - minT) / timeSpan) * plotW;
+                    const py = padTop + plotH * (1.0 - (pt.E - minE) / (maxE - minE));
+                    if (!started) { ctx.moveTo(px, py); started = true; }
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Plot Lagrangian L(t) = K - V
+                ctx.strokeStyle = '#f59e0b';
+                ctx.setLineDash([3, 3]);
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                started = false;
+                for (let i = 0; i < historyX.length; i++) {
+                    const pt = historyX[i];
+                    if (pt.t < minT) continue;
+                    const px = padLeft + ((pt.t - minT) / timeSpan) * plotW;
+                    const py = padTop + plotH * (1.0 - (pt.L - minE) / (maxE - minE));
+                    if (!started) { ctx.moveTo(px, py); started = true; }
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Legend Panel
+            const legX = w - 220;
+            const legY = 25;
+            ctx.fillStyle = c.panelBg;
+            ctx.strokeStyle = c.grid;
+            ctx.fillRect(legX, legY, 190, 105);
+            ctx.strokeRect(legX, legY, 190, 105);
+
+            ctx.font = 'bold 11px var(--font-sans)';
+            ctx.textAlign = 'left';
+
+            ctx.fillStyle = c.kinetic;
+            ctx.fillRect(legX + 12, legY + 15, 14, 10);
+            ctx.fillStyle = c.text;
+            ctx.fillText('Cinética K = ½mẋ²', legX + 34, legY + 24);
+
+            ctx.fillStyle = c.potential;
+            ctx.fillRect(legX + 12, legY + 37, 14, 10);
+            ctx.fillStyle = c.text;
+            ctx.fillText('Potencial V = ½kx²', legX + 34, legY + 46);
+
+            ctx.fillStyle = c.total;
+            ctx.fillRect(legX + 12, legY + 59, 14, 10);
+            ctx.fillStyle = c.text;
+            ctx.fillText('Total E = K + V (Cte)', legX + 34, legY + 68);
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(legX + 12, legY + 81, 14, 4);
+            ctx.fillStyle = c.text;
+            ctx.fillText('Lagrangiano L = K - V', legX + 34, legY + 87);
+
+            ctx.restore();
+        }
+
+        // View 4: Hamilton's Principle (Stationary Action Variational Analysis)
+        function renderHamiltonView(x, y, w, h, c) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            ctx.fillStyle = c.bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // Section Header
+            ctx.fillStyle = c.text;
+            ctx.font = state.latexMode ? 'bold 16px var(--font-math)' : 'bold 15px var(--font-sans)';
+            ctx.fillText('Principio de Hamilton: Variación de la Acción δS = 0 (Sección 1.1.2)', 20, 30);
+
+            const padLeft = 70;
+            const padRight = 320;
+            const padTop = 60;
+            const padBot = 60;
+            const plotW = w - padLeft - padRight;
+            const plotH = h - padTop - padBot;
+
+            const T = state.T_var;
+            const steps = 300;
+            const dt = T / steps;
+
+            const x_c = new Float64Array(steps + 1);
+            const v_c = new Float64Array(steps + 1);
+            const x_eps = new Float64Array(steps + 1);
+            const v_eps = new Float64Array(steps + 1);
+
+            let S_crit = 0;
+            let S_var = 0;
+
+            const n_harm = state.n_harmonic;
+            const eps = state.epsilon;
+
+            for (let i = 0; i <= steps; i++) {
+                const t_i = i * dt;
+
+                x_c[i] = state.A * Math.cos(state.omega * t_i + state.phi);
+                v_c[i] = -state.A * state.omega * Math.sin(state.omega * t_i + state.phi);
+
+                const xi = Math.sin((n_harm * Math.PI * t_i) / T);
+                const dxi_dt = ((n_harm * Math.PI) / T) * Math.cos((n_harm * Math.PI * t_i) / T);
+
+                x_eps[i] = x_c[i] + eps * xi;
+                v_eps[i] = v_c[i] + eps * dxi_dt;
+
+                const L_c = 0.5 * state.m * v_c[i] * v_c[i] - 0.5 * state.k * x_c[i] * x_c[i];
+                const L_eps = 0.5 * state.m * v_eps[i] * v_eps[i] - 0.5 * state.k * x_eps[i] * x_eps[i];
+
+                const weight = (i === 0 || i === steps) ? 0.5 : 1.0;
+                S_crit += L_c * weight * dt;
+                S_var += L_eps * weight * dt;
+            }
+
+            const deltaS = S_var - S_crit;
+
+            // Plotting Axes
+            let maxAmp = 0;
+            for (let i = 0; i <= steps; i++) {
+                maxAmp = Math.max(maxAmp, Math.abs(x_c[i]), Math.abs(x_eps[i]));
+            }
+            maxAmp = Math.max(3.0, maxAmp * 1.25);
+
+            // Grid Lines
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
+            for (let val = -Math.floor(maxAmp); val <= Math.floor(maxAmp); val += 1) {
+                const py = padTop + plotH * (0.5 - val / (2 * maxAmp));
+                ctx.beginPath();
+                ctx.moveTo(padLeft, py);
+                ctx.lineTo(padLeft + plotW, py);
+                ctx.stroke();
+
+                ctx.fillStyle = c.textMuted;
+                ctx.font = '10px var(--font-mono)';
+                ctx.textAlign = 'right';
+                ctx.fillText(val.toFixed(1) + ' m', padLeft - 8, py + 3);
+            }
+
+            // Zero Axis
+            const zeroY = padTop + plotH * 0.5;
+            ctx.strokeStyle = c.axis;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, zeroY);
+            ctx.lineTo(padLeft + plotW, zeroY);
+            ctx.moveTo(padLeft, padTop);
+            ctx.lineTo(padLeft, h - padBot);
+            ctx.stroke();
+
+            // Axis Arrow & Label
+            drawArrowhead(ctx, padLeft + plotW, zeroY, 0, c.axis);
+            ctx.fillStyle = c.text;
+            ctx.font = 'bold 12px var(--font-math)';
+            ctx.fillText('t (s)', padLeft + plotW + 10, zeroY + 4);
+
+            // Draw Varied Trajectory x_eps(t)
+            ctx.strokeStyle = '#ef4444';
+            ctx.setLineDash([5, 4]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const t_i = i * dt;
+                const px = padLeft + (t_i / T) * plotW;
+                const py = padTop + plotH * (0.5 - x_eps[i] / (2 * maxAmp));
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Critical Trajectory x_c(t)
+            ctx.strokeStyle = c.main;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const t_i = i * dt;
+                const px = padLeft + (t_i / T) * plotW;
+                const py = padTop + plotH * (0.5 - x_c[i] / (2 * maxAmp));
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Draw Endpoint Nodes A0 and A1
+            const p0x = padLeft;
+            const p0y = padTop + plotH * (0.5 - x_c[0] / (2 * maxAmp));
+            const p1x = padLeft + plotW;
+            const p1y = padTop + plotH * (0.5 - x_c[steps] / (2 * maxAmp));
+
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.arc(p0x, p0y, 6, 0, 2 * Math.PI);
+            ctx.arc(p1x, p1y, 6, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.fillStyle = c.text;
+            ctx.font = 'bold 12px var(--font-math)';
+            ctx.fillText('A₀(t₀, x₀)', p0x - 10, p0y - 12);
+            ctx.fillText('A₁(t₁, x₁)', p1x - 30, p1y - 12);
+
+            // Right-Side Variational Analysis Panel
+            const cardX = w - padRight + 20;
+            const cardY = padTop;
+            const cardW = padRight - 40;
+            const cardH = plotH;
+
+            ctx.fillStyle = c.panelBg;
+            ctx.strokeStyle = c.grid;
+            ctx.lineWidth = 1;
+            ctx.fillRect(cardX, cardY, cardW, cardH);
+            ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+            ctx.fillStyle = c.text;
+            ctx.font = 'bold 13px var(--font-sans)';
+            ctx.textAlign = 'left';
+            ctx.fillText('Cálculo Numérico de Acción S[x]', cardX + 15, cardY + 28);
+
+            ctx.font = '12px var(--font-math)';
+            ctx.fillStyle = c.textMuted;
+            ctx.fillText('S[x] = ∫₀ᵀ (½mẋ² - ½kx²) dt', cardX + 15, cardY + 50);
+
+            // Statistics Table
+            const startY = cardY + 80;
+            ctx.font = '12px var(--font-mono)';
+
+            ctx.fillStyle = c.main;
+            ctx.fillText(`x_c(t) (Crítica EL):`, cardX + 15, startY);
+            ctx.fillStyle = c.text;
+            ctx.fillText(`S[x_c] = ${S_crit.toFixed(5)} J·s`, cardX + 15, startY + 20);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText(`x_ε(t) (Variada ε=${eps.toFixed(2)}):`, cardX + 15, startY + 55);
+            ctx.fillStyle = c.text;
+            ctx.fillText(`S[x_ε] = ${S_var.toFixed(5)} J·s`, cardX + 15, startY + 75);
+
+            // Delta S Highlight
+            ctx.fillStyle = c.panelBg;
+            ctx.fillRect(cardX + 15, startY + 110, cardW - 30, 45);
+            ctx.strokeStyle = deltaS >= 0 ? '#10b981' : '#f59e0b';
+            ctx.strokeRect(cardX + 15, startY + 110, cardW - 30, 45);
+
+            ctx.fillStyle = deltaS >= 0 ? '#10b981' : '#f59e0b';
+            ctx.font = 'bold 12px var(--font-mono)';
+            ctx.fillText(`ΔS = S[x_ε] - S[x_c]`, cardX + 25, startY + 128);
+            ctx.fillText(`   = ${deltaS >= 0 ? '+' : ''}${deltaS.toFixed(5)} J·s`, cardX + 25, startY + 145);
+
+            // Mathematical Statement Box
+            ctx.fillStyle = c.textMuted;
+            ctx.font = '11px var(--font-math)';
+            const mathNote = [
+                'Condición de estacionariedad:',
+                'Para todo modo ξ(t) con ξ(t₀) = ξ(t₁) = 0,',
+                'la trayectoria física x_c(t) satisface:',
+                'dS/dε |_(ε=0) = 0.'
+            ];
+            for (let k = 0; k < mathNote.length; k++) {
+                ctx.fillText(mathNote[k], cardX + 15, startY + 185 + k * 18);
+            }
+
+            ctx.restore();
+        }
+
+        // DOM EVENT LISTENERS & INTERACTIVITY
+        function setupEventListeners() {
+
+            window.addEventListener('resize', resizeCanvas);
+
+            // View Selector Navigation
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.currentView = btn.dataset.view;
+
+                    if (state.currentView === 'hamilton') {
+                        document.body.classList.add('mode-hamilton');
+                    } else {
+                        document.body.classList.remove('mode-hamilton');
+                    }
+                    render();
+                });
+            });
+
+            // Preset Selection
+            document.getElementById('presetSelect').addEventListener('change', (e) => {
+                const val = e.target.value;
+                switch (val) {
+                    case 'standard':
+                        state.m = 1.0; state.k = 1.0; state.x0 = 2.0; state.v0 = 0.0;
+                        break;
+                    case 'impulse':
+                        state.m = 1.0; state.k = 2.0; state.x0 = 0.0; state.v0 = 3.0;
+                        break;
+                    case 'stiff':
+                        state.m = 0.5; state.k = 8.0; state.x0 = 1.5; state.v0 = 0.0;
+                        break;
+                    case 'inertia':
+                        state.m = 4.0; state.k = 1.0; state.x0 = 2.2; state.v0 = 0.0;
+                        break;
+                    case 'hamilton_demo':
+                        state.m = 1.0; state.k = 1.0; state.x0 = 2.0; state.v0 = 0.0;
+                        state.epsilon = 0.60;
+                        document.querySelector('[data-view="hamilton"]').click();
+                        break;
+                }
+                updateSliderInputs();
+                resetSimulation();
+            });
+
+            // Sliders Connection
+            bindSlider('sliderMass', 'valMass', 'm', 'kg', resetSimulation);
+            bindSlider('sliderK', 'valK', 'k', 'N/m', resetSimulation);
+            bindSlider('sliderX0', 'valX0', 'x0', 'm', resetSimulation);
+            bindSlider('sliderV0', 'valV0', 'v0', 'm/s', resetSimulation);
+
+            bindSlider('sliderEpsilon', 'valEpsilon', 'epsilon', '', render);
+            bindSlider('sliderHarmonic', 'valHarmonic', 'n_harmonic', '', render, true);
+            bindSlider('sliderTVar', 'valTVar', 'T_var', 's', render);
+
+            // Simulation Controls
+            const btnPlay = document.getElementById('btnPlayPause');
+            btnPlay.addEventListener('click', () => {
+                state.isPaused = !state.isPaused;
+                btnPlay.textContent = state.isPaused ? '▶️ Reanudar' : '⏸️ Pausa';
+            });
+
+            document.getElementById('btnReset').addEventListener('click', resetSimulation);
+            document.getElementById('btnClearTrace').addEventListener('click', clearTrace);
+
+            // Speed Selector Buttons
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.simSpeed = parseFloat(btn.dataset.speed);
+                });
+            });
+
+            // Visual Checkboxes
+            document.getElementById('chkPermanentTrace').addEventListener('change', (e) => {
+                state.permanentTrace = e.target.checked;
+            });
+            document.getElementById('chkShowVectors').addEventListener('change', (e) => {
+                state.showVectors = e.target.checked;
+            });
+            document.getElementById('chkShowAnalytical').addEventListener('change', (e) => {
+                state.showAnalytical = e.target.checked;
+            });
+
+            // Color Picker Dots
+            document.querySelectorAll('.color-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+                    dot.classList.add('active');
+                    state.paletteName = dot.dataset.color;
+
+                    const hex = state.colors[state.paletteName].main;
+                    const lightHex = state.colors[state.paletteName].light;
+                    document.documentElement.style.setProperty('--theme-color', hex);
+                    document.documentElement.style.setProperty('--theme-color-light', lightHex);
+                    render();
+                });
+            });
+
+            // Paper Mode Toggle Button
+            const btnLatex = document.getElementById('btnLatexMode');
+            btnLatex.addEventListener('click', () => {
+                state.latexMode = !state.latexMode;
+                if (state.latexMode) {
+                    document.body.classList.add('latex-paper');
+                    btnLatex.classList.add('active');
+                    btnLatex.textContent = '🖥️ Modo Oscuro';
+                } else {
+                    document.body.classList.remove('latex-paper');
+                    btnLatex.classList.remove('active');
+                    btnLatex.textContent = '📄 Modo Papel';
+                }
+                render();
+            });
+
+            // PNG Export Handler
+            document.getElementById('btnExportPng').addEventListener('click', exportPNG);
+
+            // Copy LaTeX Handler
+            document.getElementById('btnCopyLatex').addEventListener('click', copyLaTeX);
+
+            // Mass Drag & Drop Handlers on Canvas
+            canvas.addEventListener('mousedown', handlePointerDown);
+            window.addEventListener('mousemove', handlePointerMove);
+            window.addEventListener('mouseup', handlePointerUp);
+
+            canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+            window.addEventListener('touchmove', handlePointerMove, { passive: false });
+            window.addEventListener('touchend', handlePointerUp);
+        }
+
+        function bindSlider(sliderId, valId, stateKey, unit, callback, isInteger = false) {
+            const slider = document.getElementById(sliderId);
+            const valSpan = document.getElementById(valId);
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                state[stateKey] = val;
+                const formatted = isInteger ? String(Math.round(val)) : val.toFixed(2);
+                valSpan.textContent = formatted + (unit ? ' ' + unit : '');
+                if (callback) callback();
+            });
+        }
+
+        function updateSliderInputs() {
+            document.getElementById('sliderMass').value = state.m;
+            document.getElementById('valMass').textContent = state.m.toFixed(2) + ' kg';
+
+            document.getElementById('sliderK').value = state.k;
+            document.getElementById('valK').textContent = state.k.toFixed(2) + ' N/m';
+
+            document.getElementById('sliderX0').value = state.x0;
+            document.getElementById('valX0').textContent = state.x0.toFixed(2) + ' m';
+
+            document.getElementById('sliderV0').value = state.v0;
+            document.getElementById('valV0').textContent = state.v0.toFixed(2) + ' m/s';
+
+            document.getElementById('sliderEpsilon').value = state.epsilon;
+            document.getElementById('valEpsilon').textContent = state.epsilon.toFixed(2);
+        }
+
+        // DRAG AND DROP (1D Mass Drag)
+        function getCanvasCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function handlePointerDown(e) {
+            if (state.currentView !== 'full') return;
+            if (!window.blockBounds) return;
+
+            const coords = getCanvasCoordinates(e);
+            const b = window.blockBounds;
+
+            if (coords.x >= b.x1 && coords.x <= b.x2 && coords.y >= b.y1 && coords.y <= b.y2) {
+                state.isDragging = true;
+                canvas.style.cursor = 'grabbing';
+                if (e.cancelable) e.preventDefault();
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!state.isDragging || !window.blockBounds) return;
+
+            const coords = getCanvasCoordinates(e);
+            const b = window.blockBounds;
+
+            let newX = (coords.x - b.centerX) / b.scaleX;
+            newX = Math.max(-3.0, Math.min(3.0, newX));
+
+            state.x0 = newX;
+            state.v0 = 0.0;
+            updateSliderInputs();
+            resetSimulation();
+
+            if (e.cancelable) e.preventDefault();
+        }
+
+        function handlePointerUp() {
+            if (state.isDragging) {
+                state.isDragging = false;
+                canvas.style.cursor = 'default';
+            }
+        }
+
+        // Export PNG High-Res
+        function exportPNG() {
+            render();
+            const imageURI = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `oscilador_armonico_${state.currentView}.png`;
+            link.href = imageURI;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('📷 Figura descargada en alta resolución PNG');
+        }
+
+        // Copy Formatted LaTeX Code to Clipboard
+        function copyLaTeX() {
+            const latexText = `% =========================================================
+% Oscilador Armónico Simple (1 GDL)
+% Parámetros actuales del sistema:
+%   Masa (m) = ${state.m.toFixed(2)} kg
+%   Constante elástica (k) = ${state.k.toFixed(2)} N/m
+%   Frecuencia propia (ω) = ${state.omega.toFixed(4)} rad/s
+%   Periodo de oscilación (T) = ${(2*Math.PI/state.omega).toFixed(4)} s
+%   Amplitud (A) = ${state.A.toFixed(4)} m
+%   Fase inicial (φ) = ${state.phi.toFixed(4)} rad
+%   Energía Total (E) = ${state.E0.toFixed(4)} J
+% =========================================================
+
+\\subsection{El Oscilador Armónico Simple (1 GDL)}
+
+La ecuación diferencial del movimiento derivada de la ley de Hooke es:
+\\begin{equation}
+m \\ddot{x}(t) + k x(t) = 0 \\implies \\ddot{x}(t) + \\omega^2 x(t) = 0, \\quad \\text{con } \\omega = \\sqrt{\\frac{k}{m}}
+\\end{equation}
+
+La solución analítica exacta en el espacio de configuraciones viene dada por:
+\\begin{equation}
+x(t) = A \\cos(\\omega t + \\phi), \\quad \\dot{x}(t) = -A \\omega \\sin(\\omega t + \\phi)
+\\end{equation}
+donde las constantes de integración dependen de las condiciones iniciales $(x_0, \\dot{x}_0)$:
+\\begin{equation}
+A = \\sqrt{x_0^2 + \\left(\\frac{\\dot{x}_0}{\\omega}\\right)^2}, \\quad \\phi = \\operatorname{atan2}\\left(-\\frac{\\dot{x}_0}{\\omega}, x_0\\right)
+\\end{equation}
+
+El Lagrangiano del sistema $L(x, \\dot{x}) = K(\\dot{x}) - V(x)$ toma la forma cuadrática:
+\\begin{equation}
+L(x, \\dot{x}) = \\frac{1}{2} m \\dot{x}^2 - \\frac{1}{2} k x^2
+\\end{equation}
+
+Según el \\textbf{Principio de Hamilton}, la trayectoria física $x(t)$ hace estacionario el funcional Acción $S[x]$:
+\\begin{equation}
+S[x] = \\int_{t_0}^{t_1} L(x(t), \\dot{x}(t)) \\, dt, \\quad \\delta S = 0 \\iff \\frac{d}{dt}\\left(\\frac{\\partial L}{\\partial \\dot{x}}\\right) - \\frac{\\partial L}{\\partial x} = 0
+\\end{equation}`;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(latexText).then(() => {
+                    showToast('📋 Formulación LaTeX copiada al portapapeles');
+                });
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = latexText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('📋 Formulación LaTeX copiada al portapapeles');
+                } catch (err) {
+                    showToast('❌ Error al copiar LaTeX');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Start App on Window Load
+        window.onload = init;
+    </script>
+</body>
+</html>
