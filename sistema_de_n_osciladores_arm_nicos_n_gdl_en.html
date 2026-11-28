@@ -1,0 +1,2538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de n Osciladores Armónicos (n GDL en ℝⁿ) — TFG Matemáticas</title>
+    <style>
+        /* =========================================================
+           DESIGN TOKENS & THEMES (DARK ACADEMIC & LATEX PAPER MODE)
+           ========================================================= */
+        :root {
+            --bg-app: #090d16;
+            --bg-panel: #111827;
+            --bg-card: #161f30;
+            --bg-input: #1e293b;
+            --border-color: #273247;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent: #9333ea;
+            --accent-light: #c084fc;
+            --accent-hover: #7e22ce;
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+            --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-math: 'Cambria Math', 'Latin Modern Math', 'STIX Two Math', Georgia, 'Times New Roman', serif;
+            --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+            --radius: 10px;
+        }
+
+        body.latex-paper {
+            --bg-app: #ffffff;
+            --bg-panel: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-input: #f1f5f9;
+            --border-color: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --accent: #6d28d9;
+            --accent-light: #7c3aed;
+            --accent-hover: #5b21b6;
+            --shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+            font-family: var(--font-math);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* =========================================================
+           HEADER
+           ========================================================= */
+        header {
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.65rem 1.1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            z-index: 20;
+        }
+
+        .title-group h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+
+        .badge-gdl {
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.18rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(147, 51, 234, 0.18);
+            color: var(--accent-light);
+            border: 1px solid rgba(147, 51, 234, 0.35);
+            font-family: var(--font-math);
+        }
+
+        body.latex-paper .badge-gdl {
+            background: #f3e8ff;
+            color: #5b21b6;
+            border-color: #d8b4fe;
+        }
+
+        .title-group p {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            margin-top: 0.12rem;
+        }
+
+        .nav-views {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            background: var(--bg-app);
+            padding: 0.25rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .view-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.42rem 0.75rem;
+            border-radius: 7px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .view-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-input);
+        }
+
+        .view-btn.active {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(147, 51, 234, 0.35);
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .btn {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.42rem 0.72rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-light);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-latex.active {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+
+        /* =========================================================
+           WORKSPACE LAYOUT
+           ========================================================= */
+        .workspace {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 310px;
+            min-width: 280px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            padding: 0.85rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .control-group {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 0.72rem 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .control-group.highlight-n {
+            border-color: var(--accent);
+            background: linear-gradient(145deg, rgba(147, 51, 234, 0.12), var(--bg-card));
+        }
+
+        body.latex-paper .control-group.highlight-n {
+            background: #faf5ff;
+            border-color: #a855f7;
+        }
+
+        .control-group h3 {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .n-display-badge {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--accent-light);
+            font-family: var(--font-mono);
+            background: var(--bg-input);
+            padding: 0.1rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        body.latex-paper .n-display-badge {
+            color: #5b21b6;
+        }
+
+        .preset-select {
+            width: 100%;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.45rem 0.6rem;
+            font-size: 0.8rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .sim-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.35rem;
+        }
+
+        .speed-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.3rem;
+            margin-top: 0.2rem;
+        }
+
+        .speed-btn {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.3rem;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font-mono);
+        }
+
+        .speed-btn.active {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        /* Oscillator Selector Pills */
+        .osc-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .osc-pill {
+            flex: 1 1 28%;
+            min-width: 62px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.34rem 0.45rem;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            transition: all 0.15s ease;
+        }
+
+        .osc-pill .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .osc-pill.active {
+            border-color: var(--pill-color, var(--accent));
+            box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.25);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        body.latex-paper .osc-pill.active {
+            background: #f1f5f9;
+        }
+
+        /* Sliders */
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.22rem;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .slider-val {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.78rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--bg-input);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            border: 2px solid #ffffff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+
+        .mini-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            margin-top: 0.25rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            accent-color: var(--accent);
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+
+        /* Toggle visibility by mode */
+        .variational-only { display: none; }
+        body.mode-hamilton .variational-only { display: flex; }
+        body.mode-hamilton .standard-only { display: none; }
+
+        /* =========================================================
+           MAIN CANVAS & TELEMETRY
+           ========================================================= */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            background: var(--bg-app);
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Floating Phase Mode Toggle (only visible in Phase View) */
+        .phase-mode-bar {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            display: none;
+            gap: 0.3rem;
+            background: var(--bg-panel);
+            padding: 0.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+
+        body.mode-phase .phase-mode-bar {
+            display: flex;
+        }
+
+        .phase-toggle-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.32rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .phase-toggle-btn.active {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        /* Telemetry Card (2 compact rows) */
+        .telemetry-card {
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            padding: 0.5rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.38rem;
+            font-size: 0.76rem;
+        }
+
+        .telemetry-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem 1.1rem;
+        }
+
+        .telemetry-row.row-osc {
+            padding-top: 0.35rem;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .telemetry-tag {
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 98px;
+        }
+
+        .telemetry-tag .tag-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .telemetry-item {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.3rem;
+        }
+
+        .telemetry-label {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .telemetry-val {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            background: var(--accent);
+            color: #ffffff;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transform: translateY(12px);
+            pointer-events: none;
+            transition: all 0.25s ease;
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* =========================================================
+           RESPONSIVE DESIGN (MOBILE & TABLET)
+           ========================================================= */
+        @media (max-width: 920px) {
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+            .workspace {
+                flex-direction: column-reverse;
+                overflow: visible;
+            }
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                border-right: none;
+                border-top: 1px solid var(--border-color);
+                overflow-y: visible;
+            }
+            .canvas-wrapper {
+                height: 62vh;
+                min-height: 420px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <div class="title-group">
+        <h1>
+            Sistema de n Osciladores Armónicos
+            <span class="badge-gdl" id="headerBadge">(4 GDL en ℝ⁴)</span>
+        </h1>
+        <p>Mecánica Analítica &bull; Capítulo 1, Sección 1.2 (TFG Matemáticas)</p>
+    </div>
+
+    <nav class="nav-views" aria-label="Vistas de simulación">
+        <button class="view-btn active" data-view="full">🌐 Completa</button>
+        <button class="view-btn" data-view="phase">🌀 Espacio de Fases</button>
+        <button class="view-btn" data-view="energy">⚡ Energías / Lagrangiano</button>
+        <button class="view-btn" data-view="hamilton">⚖️ Principio de Hamilton</button>
+    </nav>
+
+    <div class="action-buttons">
+        <button class="btn btn-latex" id="btnLatexMode" title="Alternar modo papel blanco para LaTeX">📄 Modo Papel</button>
+        <button class="btn" id="btnExportPng" title="Descargar imagen PNG de alta resolución">📷 Capturar PNG</button>
+        <button class="btn btn-primary" id="btnCopyLatex" title="Copiar bloque LaTeX con parámetros actuales">📋 Copiar LaTeX</button>
+    </div>
+</header>
+
+<!-- Workspace -->
+<div class="workspace">
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+
+        <!-- Prominent Slider: Number of Oscillators n (1 to 6) -->
+        <div class="control-group highlight-n">
+            <h3>
+                <span>Número de Osciladores (n)</span>
+                <span class="n-display-badge" id="valN">n = 4</span>
+            </h3>
+            <div class="slider-control">
+                <input type="range" id="sliderN" min="1" max="6" step="1" value="4" aria-label="Número de osciladores n">
+                <div class="slider-header" style="font-size: 0.72rem; margin-top: 0.1rem;">
+                    <span>1 (ℝ¹)</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
+                    <span>6 (ℝ⁶)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="control-group">
+            <h3>Casos Preconfigurados</h3>
+            <select id="presetSelect" class="preset-select">
+                <option value="diverse">1. Desacoplados diversos (n = 4)</option>
+                <option value="harmonic">2. Frecuencias armónicas (ωᵢ = i·ω₁)</option>
+                <option value="wave">3. Onda desfasada (misma ω, distinta fase)</option>
+                <option value="stiffness">4. Misma masa, rigidez creciente</option>
+                <option value="hamilton_demo">5. Estudio Variacional en ℝⁿ (Acción S[x])</option>
+            </select>
+        </div>
+
+        <!-- Simulation Controls -->
+        <div class="control-group">
+            <h3>Control de Simulación</h3>
+            <div class="sim-controls">
+                <button class="btn" id="btnPlayPause">⏸️ Pausa</button>
+                <button class="btn" id="btnReset">🔄 Reiniciar</button>
+                <button class="btn" id="btnClearTrace">🧹 Limpiar</button>
+            </div>
+            <div class="slider-control" style="margin-top: 0.2rem;">
+                <div class="slider-header">
+                    <span>Velocidad de simulación:</span>
+                </div>
+                <div class="speed-selector">
+                    <button class="speed-btn" data-speed="0.25">0.25x</button>
+                    <button class="speed-btn" data-speed="0.5">0.5x</button>
+                    <button class="speed-btn active" data-speed="1.0">1.0x</button>
+                    <button class="speed-btn" data-speed="2.0">2.0x</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-Oscillator Parameters (Standard Views) -->
+        <div class="control-group standard-only">
+            <h3>
+                <span>Parámetros por Oscilador</span>
+                <span id="selectedOscLabel" style="font-family:var(--font-mono); color:var(--accent-light);">Osc. 1</span>
+            </h3>
+
+            <!-- Dynamic Color-Coded Pills -->
+            <div class="osc-pills" id="oscPills"></div>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Masa (<span id="lblM">m₁</span>):</span>
+                    <span class="slider-val" id="valMass">1.00 kg</span>
+                </div>
+                <input type="range" id="sliderMass" min="0.2" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Constante elástica (<span id="lblK">k₁</span>):</span>
+                    <span class="slider-val" id="valK">2.00 N/m</span>
+                </div>
+                <input type="range" id="sliderK" min="0.2" max="15.0" step="0.1" value="2.0">
+            </div>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Posición inicial (<span id="lblX0">x₀,₁</span>):</span>
+                    <span class="slider-val" id="valX0">1.20 m</span>
+                </div>
+                <input type="range" id="sliderX0" min="-3.0" max="3.0" step="0.1" value="1.2">
+            </div>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Velocidad inicial (<span id="lblV0">v₀,₁</span>):</span>
+                    <span class="slider-val" id="valV0">0.00 m/s</span>
+                </div>
+                <input type="range" id="sliderV0" min="-5.0" max="5.0" step="0.1" value="0.0">
+            </div>
+
+            <div class="mini-actions">
+                <button class="btn" id="btnRandomize">🎲 Aleatorizar</button>
+                <button class="btn" id="btnEqualize">Igualar todos a #1</button>
+            </div>
+        </div>
+
+        <!-- Variational Parameters (Hamilton Mode) -->
+        <div class="control-group variational-only">
+            <h3>Parámetros Variacionales (ℝⁿ)</h3>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Parámetro de variación (ε):</span>
+                    <span class="slider-val" id="valEpsilon">0.60</span>
+                </div>
+                <input type="range" id="sliderEpsilon" min="-1.5" max="1.5" step="0.05" value="0.60">
+            </div>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Modo armónico (h):</span>
+                    <span class="slider-val" id="valHarmonic">1</span>
+                </div>
+                <input type="range" id="sliderHarmonic" min="1" max="3" step="1" value="1">
+            </div>
+
+            <div class="slider-control">
+                <div class="slider-header">
+                    <span>Intervalo temporal (T_var):</span>
+                    <span class="slider-val" id="valTVar">4.00 s</span>
+                </div>
+                <input type="range" id="sliderTVar" min="0.5" max="10.0" step="0.25" value="4.0">
+            </div>
+
+            <div class="slider-control" style="margin-top: 0.2rem;">
+                <div class="slider-header">
+                    <span>Perturbación ξ(t):</span>
+                </div>
+                <select id="selectHamiltonScope" class="preset-select">
+                    <option value="all">Todos los componentes (ℝⁿ)</option>
+                    <option value="selected">Solo oscilador seleccionado (xᵢ)</option>
+                </select>
+            </div>
+
+            <div style="margin-top: 0.2rem;">
+                <div class="slider-header" style="margin-bottom:0.3rem;">
+                    <span>Oscilador activo en gráfica:</span>
+                </div>
+                <div class="osc-pills" id="oscPillsHamilton"></div>
+            </div>
+        </div>
+
+        <!-- Visual Options -->
+        <div class="control-group">
+            <h3>Opciones Visuales</h3>
+            <label class="checkbox-label">
+                <input type="checkbox" id="chkPermanentTrace" checked> Traza permanente
+            </label>
+            <label class="checkbox-label standard-only">
+                <input type="checkbox" id="chkShowVectors" checked> Mostrar vectores (Fᵢ, ẋᵢ)
+            </label>
+            <label class="checkbox-label standard-only">
+                <input type="checkbox" id="chkShowAnalytical" checked> Superponer sol. analítica
+            </label>
+        </div>
+
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="simCanvas"></canvas>
+
+            <!-- Phase View Mode Toggle -->
+            <div class="phase-mode-bar" id="phaseModeBar">
+                <button class="phase-toggle-btn active" data-pmode="overlay">Superpuesto</button>
+                <button class="phase-toggle-btn" data-pmode="grid">Cuadrícula individual</button>
+            </div>
+        </div>
+
+        <!-- Bottom Telemetry Bar -->
+        <div class="telemetry-card" id="telemetryCard">
+            <!-- Row 1: System Totals in R^n -->
+            <div class="telemetry-row">
+                <span class="telemetry-tag">Sistema ℝⁿ</span>
+                <div class="telemetry-item"><span class="telemetry-label">t:</span><span class="telemetry-val" id="telT">0.00 s</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">K(ẋ):</span><span class="telemetry-val" id="telK">0.000 J</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">V(x):</span><span class="telemetry-val" id="telV">0.000 J</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">E = K+V:</span><span class="telemetry-val" id="telE">0.000 J</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">Deriva |ΔE|:</span><span class="telemetry-val" id="telDrift">0.00e+0 J</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">L(x,ẋ):</span><span class="telemetry-val" id="telL">0.000 J</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">Acción S[x]:</span><span class="telemetry-val" id="telAction">0.000 J·s</span></div>
+            </div>
+
+            <!-- Row 2: Selected Oscillator i -->
+            <div class="telemetry-row row-osc">
+                <span class="telemetry-tag">
+                    <span class="tag-dot" id="telOscDot"></span>
+                    <span id="telOscName">Osc. 1</span>
+                </span>
+                <div class="telemetry-item"><span class="telemetry-label">ωᵢ:</span><span class="telemetry-val" id="telOmegaI">1.000 rad/s</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">Tᵢ:</span><span class="telemetry-val" id="telPeriodI">6.28 s</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">xᵢ(t):</span><span class="telemetry-val" id="telXI">0.000 m</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">ẋᵢ(t):</span><span class="telemetry-val" id="telVI">0.000 m/s</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">Aᵢ:</span><span class="telemetry-val" id="telAI">0.000 m</span></div>
+                <div class="telemetry-item"><span class="telemetry-label">Eᵢ:</span><span class="telemetry-val" id="telEI">0.000 J</span></div>
+            </div>
+        </div>
+    </main>
+
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toastNotification">¡Bloque LaTeX copiado al portapapeles!</div>
+
+<script>
+/**
+ * =========================================================================
+ * SIMULADOR INTERACTIVO: SISTEMA DE n OSCILADORES ARMÓNICOS (n GDL en ℝⁿ)
+ * Mecánica Analítica • Capítulo 1, Sección 1.2 (TFG Matemáticas)
+ * =========================================================================
+ */
+
+const MAX_N = 6;
+const SUPERSCRIPTS = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶'];
+const SUBSCRIPTS   = ['₀', '₁', '₂', '₃', '₄', '₅', '₆'];
+
+// High-contrast 6-color palette (dark & LaTeX paper variants)
+const OSC_COLORS = [
+    { dark: '#f43f5e', paper: '#dc2626', light: '#fda4af', name: 'Carmesí' },   // Osc 1
+    { dark: '#38bdf8', paper: '#2563eb', light: '#7dd3fc', name: 'Azul' },      // Osc 2
+    { dark: '#34d399', paper: '#059669', light: '#6ee7b7', name: 'Esmeralda' }, // Osc 3
+    { dark: '#fbbf24', paper: '#d97706', light: '#fde68a', name: 'Ámbar' },     // Osc 4
+    { dark: '#c084fc', paper: '#7c3aed', light: '#e9d5ff', name: 'Violeta' },   // Osc 5
+    { dark: '#fb923c', paper: '#ea580c', light: '#fed7aa', name: 'Naranja' }    // Osc 6
+];
+
+// Global Simulation State
+const state = {
+    n: 4,                    // Active number of oscillators (1..6)
+    selectedIdx: 0,          // Currently selected oscillator (0..n-1)
+    t: 0,
+    actionS: 0,
+    E0: 0,
+
+    // Array of 6 oscillator objects
+    oscs: [],
+
+    // Variational parameters (Hamilton view)
+    epsilon: 0.60,
+    h_harmonic: 1,
+    T_var: 4.0,
+    hamiltonScope: 'all',    // 'all' | 'selected'
+
+    // Control flags
+    isPaused: false,
+    simSpeed: 1.0,
+    currentView: 'full',     // 'full' | 'phase' | 'energy' | 'hamilton'
+    phaseMode: 'overlay',    // 'overlay' | 'grid'
+    latexMode: false,
+    permanentTrace: true,
+    showVectors: true,
+    showAnalytical: true,
+
+    // Drag & Drop
+    draggingIdx: -1
+};
+
+// History buffer: [{ t, x: [...], v: [...], K, V, E, L }]
+let historyBuf = [];
+const MAX_HISTORY = 1100;
+
+// Interactive hitboxes for masses in the physical system
+let massHitboxes = [];
+
+// Canvas references
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const canvasWrapper = document.getElementById('canvasWrapper');
+
+let lastTimestamp = 0;
+
+/* =========================================================
+   INITIALIZATION & PRESETS
+   ========================================================= */
+function createDefaultOscillators() {
+    const defaults = [
+        { m: 1.0, k: 2.0, x0:  1.1, v0:  0.0 },
+        { m: 1.4, k: 3.5, x0:  1.8, v0:  0.0 },
+        { m: 0.8, k: 5.0, x0:  2.4, v0: -0.6 },
+        { m: 1.2, k: 2.5, x0: -1.3, v0:  0.4 },
+        { m: 1.6, k: 4.0, x0:  0.0, v0:  1.8 },
+        { m: 0.9, k: 6.5, x0: -2.0, v0: -0.5 }
+    ];
+    state.oscs = defaults.map(d => ({
+        m: d.m, k: d.k, x0: d.x0, v0: d.v0,
+        x: d.x0, v: d.v0,
+        omega: 1, A: 0, phi: 0, E0: 0
+    }));
+}
+
+function applyPreset(presetName) {
+    if (presetName === 'diverse') {
+        state.n = 4;
+        const cfg = [
+            { m: 1.0, k: 2.0, x0:  1.1, v0:  0.0 },
+            { m: 1.4, k: 3.5, x0:  1.8, v0:  0.0 },
+            { m: 0.8, k: 5.0, x0:  2.4, v0: -0.6 },
+            { m: 1.2, k: 2.5, x0: -1.3, v0:  0.4 },
+            { m: 1.5, k: 4.0, x0:  0.0, v0:  1.8 },
+            { m: 0.9, k: 6.0, x0: -1.9, v0:  0.0 }
+        ];
+        cfg.forEach((c, i) => Object.assign(state.oscs[i], c));
+    } else if (presetName === 'harmonic') {
+        // ω_i = i * ω_1 with ω_1 = 1.0 rad/s
+        for (let i = 0; i < MAX_N; i++) {
+            const w = (i + 1) * 0.8;
+            const m = 1.0;
+            state.oscs[i].m = m;
+            state.oscs[i].k = Number((m * w * w).toFixed(2));
+            if (state.oscs[i].k > 15.0) {
+                state.oscs[i].k = 15.0;
+                state.oscs[i].m = Number(Math.max(0.2, 15.0 / (w * w)).toFixed(2));
+            }
+            state.oscs[i].x0 = 1.8;
+            state.oscs[i].v0 = 0.0;
+        }
+    } else if (presetName === 'wave') {
+        // Same ω, evenly shifted phases
+        const w = 1.5;
+        const m = 1.0;
+        const k = Number((m * w * w).toFixed(2));
+        const A = 2.0;
+        for (let i = 0; i < MAX_N; i++) {
+            const phi = (i * Math.PI) / Math.max(1, state.n);
+            state.oscs[i].m = m;
+            state.oscs[i].k = k;
+            state.oscs[i].x0 = Number((A * Math.cos(phi)).toFixed(2));
+            state.oscs[i].v0 = Number((-A * w * Math.sin(phi)).toFixed(2));
+        }
+    } else if (presetName === 'stiffness') {
+        // Same mass, increasing stiffness k_i
+        for (let i = 0; i < MAX_N; i++) {
+            state.oscs[i].m = 1.0;
+            state.oscs[i].k = Number((1.0 + i * 2.4).toFixed(1));
+            state.oscs[i].x0 = 2.0;
+            state.oscs[i].v0 = 0.0;
+        }
+    } else if (presetName === 'hamilton_demo') {
+        state.n = 3;
+        state.epsilon = 0.65;
+        state.h_harmonic = 1;
+        state.T_var = 4.0;
+        const cfg = [
+            { m: 1.0, k: 1.5, x0:  2.0, v0:  0.0 },
+            { m: 1.2, k: 3.0, x0: -1.5, v0:  0.8 },
+            { m: 0.8, k: 4.5, x0:  1.2, v0: -1.2 }
+        ];
+        cfg.forEach((c, i) => Object.assign(state.oscs[i], c));
+        document.getElementById('sliderEpsilon').value = state.epsilon;
+        document.getElementById('valEpsilon').textContent = state.epsilon.toFixed(2);
+        switchView('hamilton');
+    }
+
+    if (state.selectedIdx >= state.n) state.selectedIdx = state.n - 1;
+    syncNUI();
+    syncSelectedOscUI();
+    resetSimulation();
+}
+
+function recalculateAnalytical() {
+    let totalE0 = 0;
+    for (let i = 0; i < MAX_N; i++) {
+        const o = state.oscs[i];
+        o.omega = Math.sqrt(o.k / o.m);
+        o.A = Math.sqrt(o.x0 * o.x0 + (o.v0 / o.omega) * (o.v0 / o.omega));
+        if (o.A > 1e-12) {
+            let phi = Math.atan2(-o.v0 / o.omega, o.x0);
+            if (phi < 0) phi += 2 * Math.PI;
+            o.phi = phi;
+        } else {
+            o.phi = 0;
+        }
+        o.E0 = 0.5 * o.m * o.v0 * o.v0 + 0.5 * o.k * o.x0 * o.x0;
+        if (i < state.n) totalE0 += o.E0;
+    }
+    state.E0 = totalE0;
+}
+
+function resetSimulation() {
+    recalculateAnalytical();
+    state.t = 0;
+    state.actionS = 0;
+    for (let i = 0; i < MAX_N; i++) {
+        state.oscs[i].x = state.oscs[i].x0;
+        state.oscs[i].v = state.oscs[i].v0;
+    }
+    historyBuf = [];
+    recordHistoryStep();
+    updateTelemetry();
+    render();
+}
+
+function clearTrace() {
+    historyBuf = [];
+    recordHistoryStep();
+    render();
+}
+
+/* =========================================================
+   PHYSICS ENGINE: RK4 (20 SUB-STEPS PER FRAME)
+   ========================================================= */
+function stepRK4(dt) {
+    if (dt <= 0) return;
+    const subSteps = 20;
+    const h = dt / subSteps;
+
+    for (let s = 0; s < subSteps; s++) {
+        let L_sub = 0;
+        for (let i = 0; i < state.n; i++) {
+            const o = state.oscs[i];
+            const w2 = o.k / o.m;
+            const x0 = o.x;
+            const v0 = o.v;
+
+            const k1x = v0;
+            const k1v = -w2 * x0;
+
+            const k2x = v0 + 0.5 * h * k1v;
+            const k2v = -w2 * (x0 + 0.5 * h * k1x);
+
+            const k3x = v0 + 0.5 * h * k2v;
+            const k3v = -w2 * (x0 + 0.5 * h * k2x);
+
+            const k4x = v0 + h * k3v;
+            const k4v = -w2 * (x0 + h * k3x);
+
+            o.x += (h / 6.0) * (k1x + 2 * k2x + 2 * k3x + k4x);
+            o.v += (h / 6.0) * (k1v + 2 * k2v + 2 * k3v + k4v);
+
+            L_sub += 0.5 * o.m * o.v * o.v - 0.5 * o.k * o.x * o.x;
+        }
+        state.t += h;
+        state.actionS += L_sub * h;
+    }
+    recordHistoryStep();
+}
+
+function recordHistoryStep() {
+    let K = 0, V = 0;
+    const xs = new Array(state.n);
+    const vs = new Array(state.n);
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        xs[i] = o.x;
+        vs[i] = o.v;
+        K += 0.5 * o.m * o.v * o.v;
+        V += 0.5 * o.k * o.x * o.x;
+    }
+    historyBuf.push({
+        t: state.t,
+        x: xs,
+        v: vs,
+        K: K,
+        V: V,
+        E: K + V,
+        L: K - V
+    });
+
+    const limit = state.permanentTrace ? MAX_HISTORY : 260;
+    while (historyBuf.length > limit) {
+        historyBuf.shift();
+    }
+}
+
+/* =========================================================
+   TELEMETRY & COLORS
+   ========================================================= */
+function getOscColor(i) {
+    const c = OSC_COLORS[i % OSC_COLORS.length];
+    return state.latexMode ? c.paper : c.dark;
+}
+
+function getThemeColors() {
+    if (state.latexMode) {
+        return {
+            bg: '#ffffff',
+            panelBg: '#f8fafc',
+            cardBg: '#ffffff',
+            grid: '#e2e8f0',
+            axis: '#334155',
+            text: '#0f172a',
+            textMuted: '#64748b',
+            spring: '#334155',
+            kinetic: '#dc2626',
+            potential: '#2563eb',
+            total: '#7c3aed',
+            lagrangian: '#d97706'
+        };
+    }
+    return {
+        bg: '#090d16',
+        panelBg: '#111827',
+        cardBg: '#161f30',
+        grid: '#1f2937',
+        axis: '#64748b',
+        text: '#f3f4f6',
+        textMuted: '#9ca3af',
+        spring: '#94a3b8',
+        kinetic: '#fb7185',
+        potential: '#38bdf8',
+        total: '#c084fc',
+        lagrangian: '#fbbf24'
+    };
+}
+
+function updateTelemetry() {
+    let K = 0, V = 0;
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        K += 0.5 * o.m * o.v * o.v;
+        V += 0.5 * o.k * o.x * o.x;
+    }
+    const E = K + V;
+    const L = K - V;
+    const drift = Math.abs(E - state.E0);
+
+    document.getElementById('telT').textContent = state.t.toFixed(2) + ' s';
+    document.getElementById('telK').textContent = K.toFixed(3) + ' J';
+    document.getElementById('telV').textContent = V.toFixed(3) + ' J';
+    document.getElementById('telE').textContent = E.toFixed(3) + ' J';
+    document.getElementById('telDrift').textContent = drift.toExponential(2) + ' J';
+    document.getElementById('telL').textContent = L.toFixed(3) + ' J';
+    document.getElementById('telAction').textContent = state.actionS.toFixed(3) + ' J·s';
+
+    const idx = Math.min(state.selectedIdx, state.n - 1);
+    const sel = state.oscs[idx];
+    const Ti = (2 * Math.PI) / sel.omega;
+    const Ei = 0.5 * sel.m * sel.v * sel.v + 0.5 * sel.k * sel.x * sel.x;
+
+    document.getElementById('telOscDot').style.background = getOscColor(idx);
+    document.getElementById('telOscName').textContent = `Osc. ${idx + 1}`;
+    document.getElementById('telOmegaI').textContent = sel.omega.toFixed(3) + ' rad/s';
+    document.getElementById('telPeriodI').textContent = Ti.toFixed(2) + ' s';
+    document.getElementById('telXI').textContent = sel.x.toFixed(3) + ' m';
+    document.getElementById('telVI').textContent = sel.v.toFixed(3) + ' m/s';
+    document.getElementById('telAI').textContent = sel.A.toFixed(3) + ' m';
+    document.getElementById('telEI').textContent = Ei.toFixed(3) + ' J';
+}
+
+/* =========================================================
+   CANVAS RESIZE & MAIN LOOP
+   ========================================================= */
+function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvasWrapper.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    render();
+}
+
+function simLoop(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    let dt = (timestamp - lastTimestamp) / 1000;
+    lastTimestamp = timestamp;
+    if (dt > 0.08) dt = 0.08;
+
+    if (!state.isPaused && state.draggingIdx === -1) {
+        stepRK4(dt * state.simSpeed);
+        updateTelemetry();
+    }
+
+    render();
+    requestAnimationFrame(simLoop);
+}
+
+/* =========================================================
+   DRAWING UTILITIES
+   ========================================================= */
+function drawArrowhead(x, y, angle, color, size = 7) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, -size * 0.5);
+    ctx.lineTo(-size, size * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawHelicalSpring(x1, y, x2, coils, radius, color) {
+    const dist = x2 - x1;
+    if (dist < 12) return;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const leadIn = Math.min(14, dist * 0.12);
+    const leadOut = Math.min(14, dist * 0.12);
+    const usable = dist - leadIn - leadOut;
+    const step = usable / coils;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y);
+    ctx.lineTo(x1 + leadIn, y);
+
+    for (let i = 0; i < coils; i++) {
+        const cx1 = x1 + leadIn + (i + 0.25) * step;
+        const cx2 = x1 + leadIn + (i + 0.75) * step;
+        const ex  = x1 + leadIn + (i + 1.0) * step;
+        ctx.lineTo(cx1, y - radius);
+        ctx.lineTo(cx2, y + radius);
+        ctx.lineTo(ex, y);
+    }
+    ctx.lineTo(x2, y);
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawVectorArrow(x, y, dx, color, label, above) {
+    if (Math.abs(dx) < 6) return;
+    const clamped = Math.max(-95, Math.min(95, dx));
+    const x2 = x + clamped;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x2, y);
+    ctx.stroke();
+
+    drawArrowhead(x2, y, clamped >= 0 ? 0 : Math.PI, color, 6);
+
+    ctx.font = 'bold 10px var(--font-mono)';
+    ctx.textAlign = clamped >= 0 ? 'left' : 'right';
+    ctx.fillText(label, x2 + (clamped >= 0 ? 5 : -5), y + (above ? -3 : 10));
+    ctx.restore();
+}
+
+/* =========================================================
+   RENDER ROUTER
+   ========================================================= */
+function render() {
+    const w = canvasWrapper.clientWidth;
+    const h = canvasWrapper.clientHeight;
+    if (w <= 0 || h <= 0) return;
+    const c = getThemeColors();
+
+    ctx.fillStyle = c.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    if (state.currentView === 'full') {
+        const topH = Math.floor(h * 0.48);
+        const botH = h - topH;
+        const halfW = Math.floor(w * 0.5);
+
+        renderPhysicalSystem(0, 0, w, topH, c);
+
+        // Dividers
+        ctx.strokeStyle = c.grid;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, topH);
+        ctx.lineTo(w, topH);
+        ctx.moveTo(halfW, topH);
+        ctx.lineTo(halfW, h);
+        ctx.stroke();
+
+        renderPhaseOverlay(0, topH, halfW, botH, c, false);
+        renderTimeSeries(halfW, topH, w - halfW, botH, c);
+    } else if (state.currentView === 'phase') {
+        if (state.phaseMode === 'overlay') {
+            renderPhaseOverlay(0, 0, w, h, c, true);
+        } else {
+            renderPhaseGrid(0, 0, w, h, c);
+        }
+    } else if (state.currentView === 'energy') {
+        renderEnergyView(0, 0, w, h, c);
+    } else if (state.currentView === 'hamilton') {
+        renderHamiltonView(0, 0, w, h, c);
+    }
+}
+
+/* =========================================================
+   VIEW 1 (TOP): PHYSICAL SYSTEM OF n PARALLEL OSCILLATORS
+   ========================================================= */
+function renderPhysicalSystem(ox, oy, w, h, c) {
+    ctx.save();
+    ctx.translate(ox, oy);
+
+    ctx.fillStyle = c.panelBg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Header Title
+    ctx.fillStyle = c.text;
+    ctx.font = state.latexMode ? 'bold 14px var(--font-math)' : 'bold 13px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Sistema Físico en ℝ${SUPERSCRIPTS[state.n]}:  mᵢ·xᵢ'' + kᵢ·xᵢ = 0   (arrastra cualquier masa mᵢ)`, 16, 22);
+
+    const wallX = 56;
+    const topMargin = 34;
+    const botAxisY = h - 34;
+    const usableH = Math.max(60, botAxisY - topMargin);
+    const centerX = wallX + (w - wallX - 30) * 0.48;
+    const scaleX = Math.max(20, (w - wallX - 90) / 7.2); // range ~ [-3.4, +3.4] m
+
+    // Architectural Left Wall with Hatching
+    ctx.fillStyle = c.axis;
+    ctx.fillRect(wallX - 10, topMargin - 4, 10, botAxisY - topMargin + 8);
+    ctx.strokeStyle = c.panelBg;
+    ctx.lineWidth = 1.5;
+    for (let y = topMargin; y < botAxisY; y += 9) {
+        ctx.beginPath();
+        ctx.moveTo(wallX, y);
+        ctx.lineTo(wallX - 10, y + 8);
+        ctx.stroke();
+    }
+
+    // Common Vertical Dashed Equilibrium Line (x = 0)
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = c.textMuted;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(centerX, topMargin - 4);
+    ctx.lineTo(centerX, botAxisY + 6);
+    ctx.stroke();
+    ctx.restore();
+
+    // Bottom Coordinate Axis
+    ctx.strokeStyle = c.axis;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(wallX - 14, botAxisY);
+    ctx.lineTo(w - 22, botAxisY);
+    ctx.stroke();
+    drawArrowhead(w - 22, botAxisY, 0, c.axis, 7);
+
+    // Origin tick 0
+    ctx.strokeStyle = c.axis;
+    ctx.beginPath();
+    ctx.moveTo(centerX, botAxisY - 5);
+    ctx.lineTo(centerX, botAxisY + 6);
+    ctx.stroke();
+    ctx.fillStyle = c.text;
+    ctx.font = 'bold 11px var(--font-math)';
+    ctx.textAlign = 'center';
+    ctx.fillText('0', centerX, botAxisY + 19);
+
+    // Row spacing: stack from bottom (i=0 -> Osc 1) to top (i=n-1 -> Osc n)
+    const rowH = usableH / state.n;
+    const springRadius = Math.max(5, Math.min(11, rowH * 0.22));
+    const maxMassR = Math.max(11, Math.min(19, rowH * 0.36));
+
+    massHitboxes = [];
+
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        const color = getOscColor(i);
+        const isSelected = (i === state.selectedIdx);
+
+        // Bottom-to-top Y coordinate
+        const rowY = botAxisY - (i + 0.5) * rowH;
+        const posX = centerX + o.x * scaleX;
+        const massR = Math.max(10, Math.min(maxMassR, (maxMassR * 0.82) * Math.cbrt(o.m)));
+
+        // Subtle highlight band for selected oscillator
+        if (isSelected) {
+            ctx.fillStyle = state.latexMode ? 'rgba(109, 40, 217, 0.05)' : 'rgba(192, 132, 252, 0.07)';
+            ctx.fillRect(wallX + 1, rowY - rowH * 0.46, w - wallX - 24, rowH * 0.92);
+        }
+
+        // Helical Spring
+        drawHelicalSpring(wallX, rowY, posX - massR, 10, springRadius, isSelected ? color : c.spring);
+
+        // Spring stiffness label k_i
+        const midSpringX = (wallX + (posX - massR)) * 0.5;
+        ctx.fillStyle = c.textMuted;
+        ctx.font = state.latexMode ? 'italic 11px var(--font-math)' : '10px var(--font-sans)';
+        ctx.textAlign = 'center';
+        ctx.fillText(`k${SUBSCRIPTS[i + 1]}`, midSpringX, rowY - springRadius - 3);
+
+        // Mass Circle
+        ctx.save();
+        if (!state.latexMode) {
+            ctx.shadowColor = color;
+            ctx.shadowBlur = isSelected ? 14 : 6;
+        }
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(posX, rowY, massR, 0, 2 * Math.PI);
+        ctx.fill();
+
+        if (isSelected) {
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = state.latexMode ? '#0f172a' : '#ffffff';
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Mass Label m_i
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.max(10, Math.min(12, Math.floor(massR * 0.78)))}px var(--font-math)`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`m${SUBSCRIPTS[i + 1]}`, posX, rowY + 0.5);
+        ctx.textBaseline = 'alphabetic';
+
+        // Force & Velocity Vectors (optional)
+        if (state.showVectors) {
+            const F = -o.k * o.x;
+            const vecOffset = Math.min(massR + 5, rowH * 0.34);
+            drawVectorArrow(posX, rowY - vecOffset, F * 6.5, '#ef4444', `F${SUBSCRIPTS[i + 1]}`, true);
+            drawVectorArrow(posX, rowY + vecOffset, o.v * 11, '#10b981', `ẋ${SUBSCRIPTS[i + 1]}`, false);
+        }
+
+        // Live tick mark on bottom axis for x_i
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? 2.2 : 1.4;
+        ctx.beginPath();
+        ctx.moveTo(posX, botAxisY - 4);
+        ctx.lineTo(posX, botAxisY + 5);
+        ctx.stroke();
+
+        // Stagger label slightly if near 0
+        if (Math.abs(posX - centerX) > 10) {
+            ctx.fillStyle = color;
+            ctx.font = `${isSelected ? 'bold ' : ''}10px var(--font-math)`;
+            ctx.textAlign = 'center';
+            ctx.fillText(`x${SUBSCRIPTS[i + 1]}`, posX, botAxisY + (i % 2 === 0 ? 17 : 27));
+        }
+
+        // Store hitbox for drag & drop
+        massHitboxes.push({
+            idx: i,
+            cx: posX,
+            cy: rowY,
+            r: Math.max(16, massR + 4),
+            centerX: centerX,
+            scaleX: scaleX
+        });
+    }
+
+    ctx.restore();
+}
+
+/* =========================================================
+   VIEW 2: PHASE SPACE (OVERLAY & INDIVIDUAL GRID)
+   ========================================================= */
+function renderPhaseOverlay(ox, oy, w, h, c, isFull) {
+    ctx.save();
+    ctx.translate(ox, oy);
+
+    if (isFull) {
+        ctx.fillStyle = c.bg;
+        ctx.fillRect(0, 0, w, h);
+    }
+
+    ctx.fillStyle = c.text;
+    ctx.font = state.latexMode ? 'bold 14px var(--font-math)' : 'bold 13px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText('Espacio de Fases: Proyecciones (xᵢ, ẋᵢ)', 14, 24);
+
+    const cx = w * 0.5;
+    const cy = h * 0.54;
+
+    let maxX = 2.8, maxV = 3.5;
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        maxX = Math.max(maxX, o.A * 1.25);
+        maxV = Math.max(maxV, o.A * o.omega * 1.25);
+    }
+
+    const scaleX = (w * 0.80) / (2 * maxX);
+    const scaleV = (h * 0.72) / (2 * maxV);
+
+    // Grid
+    ctx.strokeStyle = c.grid;
+    ctx.lineWidth = 1;
+    for (let gx = -Math.floor(maxX); gx <= Math.floor(maxX); gx++) {
+        if (gx === 0) continue;
+        const px = cx + gx * scaleX;
+        ctx.beginPath(); ctx.moveTo(px, 36); ctx.lineTo(px, h - 22); ctx.stroke();
+    }
+    for (let gv = -Math.floor(maxV); gv <= Math.floor(maxV); gv++) {
+        if (gv === 0) continue;
+        const py = cy - gv * scaleV;
+        ctx.beginPath(); ctx.moveTo(22, py); ctx.lineTo(w - 22, py); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = c.axis;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(20, cy); ctx.lineTo(w - 18, cy);
+    ctx.moveTo(cx, h - 18); ctx.lineTo(cx, 38);
+    ctx.stroke();
+    drawArrowhead(w - 18, cy, 0, c.axis, 6);
+    drawArrowhead(cx, 38, -Math.PI / 2, c.axis, 6);
+
+    ctx.fillStyle = c.text;
+    ctx.font = 'bold 12px var(--font-math)';
+    ctx.textAlign = 'right';
+    ctx.fillText('xᵢ (m)', w - 22, cy - 8);
+    ctx.textAlign = 'left';
+    ctx.fillText('ẋᵢ (m/s)', cx + 8, 46);
+
+    // Draw orbits for all n oscillators
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        const color = getOscColor(i);
+        const isSel = (i === state.selectedIdx);
+
+        // Dashed theoretical ellipse
+        if (o.A > 0.01) {
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = isSel ? 0.55 : 0.28;
+            ctx.lineWidth = isSel ? 1.5 : 1;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, o.A * scaleX, (o.A * o.omega) * scaleV, 0, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Trace from history
+        if (historyBuf.length > 1) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isSel ? 2.4 : 1.5;
+            ctx.globalAlpha = isSel ? 0.95 : 0.72;
+            ctx.beginPath();
+            for (let k = 0; k < historyBuf.length; k++) {
+                const pt = historyBuf[k];
+                if (i >= pt.x.length) continue;
+                const px = cx + pt.x[i] * scaleX;
+                const py = cy - pt.v[i] * scaleV;
+                if (k === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Current state point & tangent velocity vector
+        const curX = cx + o.x * scaleX;
+        const curY = cy - o.v * scaleV;
+
+        const tanX = o.v * scaleX;
+        const tanY = (o.omega * o.omega * o.x) * scaleV; // inverted canvas Y
+        const tanLen = Math.hypot(tanX, tanY);
+        if (tanLen > 2) {
+            const len = isSel ? 24 : 16;
+            const nx = (tanX / tanLen) * len;
+            const ny = (tanY / tanLen) * len;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isSel ? 2 : 1.3;
+            ctx.beginPath();
+            ctx.moveTo(curX, curY);
+            ctx.lineTo(curX + nx, curY + ny);
+            ctx.stroke();
+            drawArrowhead(curX + nx, curY + ny, Math.atan2(ny, nx), color, 5);
+        }
+
+        ctx.save();
+        if (!state.latexMode) {
+            ctx.shadowColor = color;
+            ctx.shadowBlur = isSel ? 12 : 6;
+        }
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(curX, curY, isSel ? 5.5 : 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    if (isFull) {
+        // Formula box
+        ctx.fillStyle = c.panelBg;
+        ctx.strokeStyle = c.grid;
+        ctx.fillRect(16, h - 48, 330, 34);
+        ctx.strokeRect(16, h - 48, 330, 34);
+        ctx.fillStyle = c.text;
+        ctx.font = '12px var(--font-math)';
+        ctx.textAlign = 'left';
+        ctx.fillText('Órbita i-ésima:  xᵢ² / Aᵢ²  +  ẋᵢ² / (ωᵢ·Aᵢ)²  =  1', 26, h - 27);
+    }
+
+    ctx.restore();
+}
+
+function renderPhaseGrid(ox, oy, w, h, c) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.fillStyle = c.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const cols = state.n <= 2 ? state.n : (state.n <= 4 ? 2 : 3);
+    const rows = Math.ceil(state.n / cols);
+    const padTop = 44;
+    const cellW = w / cols;
+    const cellH = (h - padTop) / rows;
+
+    ctx.fillStyle = c.text;
+    ctx.font = state.latexMode ? 'bold 14px var(--font-math)' : 'bold 13px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Retratos de Fase Individuales (xᵢ, ẋᵢ) — n = ${state.n}`, 16, 26);
+
+    for (let i = 0; i < state.n; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x0 = col * cellW;
+        const y0 = padTop + row * cellH;
+        const o = state.oscs[i];
+        const color = getOscColor(i);
+
+        // Cell border
+        ctx.strokeStyle = c.grid;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0 + 6, y0 + 4, cellW - 12, cellH - 10);
+
+        // Title
+        ctx.fillStyle = color;
+        ctx.font = 'bold 12px var(--font-sans)';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Osc. ${i + 1}  (ω${SUBSCRIPTS[i + 1]}=${o.omega.toFixed(2)}, A${SUBSCRIPTS[i + 1]}=${o.A.toFixed(2)})`, x0 + 14, y0 + 22);
+
+        const cx = x0 + cellW * 0.5;
+        const cy = y0 + cellH * 0.55;
+        const maxX = Math.max(2.2, o.A * 1.3);
+        const maxV = Math.max(2.5, o.A * o.omega * 1.3);
+        const sx = (cellW * 0.76) / (2 * maxX);
+        const sv = (cellH * 0.68) / (2 * maxV);
+
+        // Axes
+        ctx.strokeStyle = c.axis;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x0 + 16, cy); ctx.lineTo(x0 + cellW - 16, cy);
+        ctx.moveTo(cx, y0 + cellH - 14); ctx.lineTo(cx, y0 + 30);
+        ctx.stroke();
+
+        // Theoretical ellipse
+        if (o.A > 0.01) {
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.45;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, o.A * sx, o.A * o.omega * sv, 0, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // History trace
+        if (historyBuf.length > 1) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let k = 0; k < historyBuf.length; k++) {
+                const pt = historyBuf[k];
+                if (i >= pt.x.length) continue;
+                const px = cx + pt.x[i] * sx;
+                const py = cy - pt.v[i] * sv;
+                if (k === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+        }
+
+        // Current point
+        const curX = cx + o.x * sx;
+        const curY = cy - o.v * sv;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(curX, curY, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+/* =========================================================
+   VIEW 1 (BOTTOM-RIGHT): TIME SERIES x_i(t)
+   ========================================================= */
+function renderTimeSeries(ox, oy, w, h, c) {
+    ctx.save();
+    ctx.translate(ox, oy);
+
+    ctx.fillStyle = c.text;
+    ctx.font = state.latexMode ? 'bold 14px var(--font-math)' : 'bold 13px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText('Evolución Temporal xᵢ(t) (RK4 vs Analítica)', 14, 24);
+
+    const padL = 44, padR = 20, padT = 38, padB = 28;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    const timeSpan = 10.0;
+    const minT = Math.max(0, state.t - timeSpan);
+
+    let maxY = 2.6;
+    for (let i = 0; i < state.n; i++) {
+        maxY = Math.max(maxY, state.oscs[i].A * 1.25);
+    }
+
+    // Grid
+    ctx.strokeStyle = c.grid;
+    ctx.lineWidth = 1;
+    for (let val = -Math.floor(maxY); val <= Math.floor(maxY); val++) {
+        const py = padT + plotH * (0.5 - val / (2 * maxY));
+        ctx.beginPath(); ctx.moveTo(padL, py); ctx.lineTo(w - padR, py); ctx.stroke();
+
+        ctx.fillStyle = c.textMuted;
+        ctx.font = '10px var(--font-mono)';
+        ctx.textAlign = 'right';
+        ctx.fillText(val.toFixed(0), padL - 6, py + 3);
+    }
+
+    // Zero Axis
+    const zeroY = padT + plotH * 0.5;
+    ctx.strokeStyle = c.axis;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(padL, zeroY); ctx.lineTo(w - padR, zeroY);
+    ctx.moveTo(padL, padT); ctx.lineTo(padL, h - padB);
+    ctx.stroke();
+
+    // Curves for each oscillator
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        const color = getOscColor(i);
+        const isSel = (i === state.selectedIdx);
+
+        // Analytical overlay (dashed)
+        if (state.showAnalytical) {
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = isSel ? 0.65 : 0.35;
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            const steps = 90;
+            for (let s = 0; s <= steps; s++) {
+                const tSim = minT + (s / steps) * timeSpan;
+                const xExact = o.A * Math.cos(o.omega * tSim + o.phi);
+                const px = padL + (s / steps) * plotW;
+                const py = padT + plotH * (0.5 - xExact / (2 * maxY));
+                if (s === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // RK4 numerical trace
+        if (historyBuf.length > 1) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isSel ? 2.5 : 1.5;
+            ctx.globalAlpha = isSel ? 1.0 : 0.78;
+            ctx.beginPath();
+            let started = false;
+            for (let k = 0; k < historyBuf.length; k++) {
+                const pt = historyBuf[k];
+                if (pt.t < minT || i >= pt.x.length) continue;
+                const px = padL + ((pt.t - minT) / timeSpan) * plotW;
+                const py = padT + plotH * (0.5 - pt.x[i] / (2 * maxY));
+                if (!started) { ctx.moveTo(px, py); started = true; }
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    ctx.restore();
+}
+
+/* =========================================================
+   VIEW 3: TOTAL ENERGIES, LAGRANGIAN & INDIVIDUAL E_i BARS
+   ========================================================= */
+function renderEnergyView(ox, oy, w, h, c) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.fillStyle = c.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const barPanelW = Math.min(290, Math.max(210, w * 0.28));
+    const plotAreaW = w - barPanelW;
+
+    // Title
+    ctx.fillStyle = c.text;
+    ctx.font = state.latexMode ? 'bold 15px var(--font-math)' : 'bold 14px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText('Conservación de Energía y Lagrangiano Total: L(x, ẋ) = K(ẋ) - V(x)', 18, 28);
+
+    const padL = 58, padR = 20, padT = 54, padB = 42;
+    const plotW = plotAreaW - padL - padR;
+    const plotH = h - padT - padB;
+
+    const timeSpan = 10.0;
+    const minT = Math.max(0, state.t - timeSpan);
+    const maxE = Math.max(2.0, state.E0 * 1.28);
+    const minE = -maxE * 0.65;
+
+    // Grid
+    ctx.strokeStyle = c.grid;
+    ctx.lineWidth = 1;
+    const stepVal = maxE > 20 ? 5 : (maxE > 8 ? 2 : 1);
+    for (let val = Math.ceil(minE / stepVal) * stepVal; val <= maxE; val += stepVal) {
+        const py = padT + plotH * (1 - (val - minE) / (maxE - minE));
+        ctx.beginPath(); ctx.moveTo(padL, py); ctx.lineTo(padL + plotW, py); ctx.stroke();
+
+        ctx.fillStyle = c.textMuted;
+        ctx.font = '10px var(--font-mono)';
+        ctx.textAlign = 'right';
+        ctx.fillText(val.toFixed(0) + ' J', padL - 8, py + 3);
+    }
+
+    // Axes
+    const zeroY = padT + plotH * (1 - (0 - minE) / (maxE - minE));
+    ctx.strokeStyle = c.axis;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(padL, zeroY); ctx.lineTo(padL + plotW, zeroY);
+    ctx.moveTo(padL, padT); ctx.lineTo(padL, h - padB);
+    ctx.stroke();
+
+    // Helper to draw a series
+    function drawEnergySeries(key, color, lineW, dashed) {
+        if (historyBuf.length < 2) return;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        if (dashed) ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        let started = false;
+        for (let k = 0; k < historyBuf.length; k++) {
+            const pt = historyBuf[k];
+            if (pt.t < minT) continue;
+            const px = padL + ((pt.t - minT) / timeSpan) * plotW;
+            const py = padT + plotH * (1 - (pt[key] - minE) / (maxE - minE));
+            if (!started) { ctx.moveTo(px, py); started = true; }
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawEnergySeries('K', c.kinetic, 2.0, false);
+    drawEnergySeries('V', c.potential, 2.0, false);
+    drawEnergySeries('E', c.total, 2.6, false);
+    drawEnergySeries('L', c.lagrangian, 1.8, true);
+
+    // Compact Legend inside plot
+    const legX = padL + 12, legY = padT + 8;
+    ctx.fillStyle = c.panelBg;
+    ctx.strokeStyle = c.grid;
+    ctx.fillRect(legX, legY, 178, 86);
+    ctx.strokeRect(legX, legY, 178, 86);
+
+    const items = [
+        { label: 'Cinética K = ½∑mᵢẋᵢ²', col: c.kinetic },
+        { label: 'Potencial V = ½∑kᵢxᵢ²', col: c.potential },
+        { label: 'Total E = K + V (Cte)', col: c.total },
+        { label: 'Lagrangiano L = K - V', col: c.lagrangian }
+    ];
+    ctx.font = 'bold 10.5px var(--font-sans)';
+    ctx.textAlign = 'left';
+    items.forEach((it, idx) => {
+        ctx.fillStyle = it.col;
+        ctx.fillRect(legX + 10, legY + 11 + idx * 19, 12, 8);
+        ctx.fillStyle = c.text;
+        ctx.fillText(it.label, legX + 28, legY + 19 + idx * 19);
+    });
+
+    // Right-Side Panel: Individual Conserved Energies E_i = K_i + V_i
+    const px0 = plotAreaW + 8;
+    const py0 = 18;
+    const pw = barPanelW - 22;
+    const ph = h - 36;
+
+    ctx.fillStyle = c.panelBg;
+    ctx.strokeStyle = c.grid;
+    ctx.fillRect(px0, py0, pw, ph);
+    ctx.strokeRect(px0, py0, pw, ph);
+
+    ctx.fillStyle = c.text;
+    ctx.font = 'bold 12px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText('Energías Individuales Eᵢ = ½kᵢAᵢ²', px0 + 12, py0 + 24);
+    ctx.fillStyle = c.textMuted;
+    ctx.font = '10.5px var(--font-sans)';
+    ctx.fillText('Reparto instantáneo: Kᵢ (rojo) / Vᵢ (azul)', px0 + 12, py0 + 42);
+
+    let maxEi = 0.5;
+    for (let i = 0; i < state.n; i++) {
+        maxEi = Math.max(maxEi, state.oscs[i].E0);
+    }
+
+    const barTop = py0 + 62;
+    const barAvailH = ph - 82;
+    const rowStep = Math.min(62, barAvailH / state.n);
+
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        const Ki = 0.5 * o.m * o.v * o.v;
+        const Vi = 0.5 * o.k * o.x * o.x;
+        const Ei = Ki + Vi;
+        const y = barTop + i * rowStep;
+        const color = getOscColor(i);
+
+        ctx.fillStyle = color;
+        ctx.font = 'bold 11px var(--font-mono)';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Osc. ${i + 1}`, px0 + 12, y + 12);
+
+        ctx.fillStyle = c.text;
+        ctx.textAlign = 'right';
+        ctx.fillText(`E${SUBSCRIPTS[i + 1]} = ${Ei.toFixed(2)} J`, px0 + pw - 12, y + 12);
+
+        // Bar track
+        const bx = px0 + 12;
+        const by = y + 18;
+        const bw = pw - 24;
+        const bh = 14;
+
+        ctx.fillStyle = c.grid;
+        ctx.fillRect(bx, by, bw, bh);
+
+        const totalW = (Ei / maxEi) * bw;
+        const kW = Ei > 1e-9 ? (Ki / Ei) * totalW : 0;
+        const vW = totalW - kW;
+
+        ctx.fillStyle = c.kinetic;
+        ctx.fillRect(bx, by, kW, bh);
+        ctx.fillStyle = c.potential;
+        ctx.fillRect(bx + kW, by, vW, bh);
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx, by, Math.max(1, totalW), bh);
+    }
+
+    ctx.restore();
+}
+
+/* =========================================================
+   VIEW 4: HAMILTON'S PRINCIPLE IN ℝⁿ (δS = 0)
+   ========================================================= */
+function renderHamiltonView(ox, oy, w, h, c) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.fillStyle = c.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = c.text;
+    ctx.font = state.latexMode ? 'bold 15px var(--font-math)' : 'bold 14px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Principio Variacional de Hamilton en ℝ${SUPERSCRIPTS[state.n]}:  d/dε S[x_c + ε·ξ]|_(ε=0) = 0`, 18, 28);
+
+    const cardW = Math.min(310, Math.max(240, w * 0.30));
+    const padL = 62, padR = cardW + 30, padT = 56, padB = 48;
+    const plotW = Math.max(120, w - padL - padR);
+    const plotH = h - padT - padB;
+
+    const T = state.T_var;
+    const steps = 260;
+    const dt = T / steps;
+    const eps = state.epsilon;
+    const hHarm = state.h_harmonic;
+    const selIdx = Math.min(state.selectedIdx, state.n - 1);
+
+    let S_crit = 0;
+    let S_var = 0;
+
+    // Store curves for plotting
+    const xcCurves = Array.from({ length: state.n }, () => new Float64Array(steps + 1));
+    const xeCurves = Array.from({ length: state.n }, () => new Float64Array(steps + 1));
+
+    let maxAmp = 2.5;
+
+    for (let s = 0; s <= steps; s++) {
+        const ti = s * dt;
+        const xiVal = Math.sin((hHarm * Math.PI * ti) / T);
+        const dxiVal = ((hHarm * Math.PI) / T) * Math.cos((hHarm * Math.PI * ti) / T);
+
+        let L_c = 0;
+        let L_e = 0;
+
+        for (let i = 0; i < state.n; i++) {
+            const o = state.oscs[i];
+            const xc = o.A * Math.cos(o.omega * ti + o.phi);
+            const vc = -o.A * o.omega * Math.sin(o.omega * ti + o.phi);
+
+            const perturbThis = (state.hamiltonScope === 'all' || i === selIdx);
+            const xe = xc + (perturbThis ? eps * xiVal : 0);
+            const ve = vc + (perturbThis ? eps * dxiVal : 0);
+
+            xcCurves[i][s] = xc;
+            xeCurves[i][s] = xe;
+
+            if (i === selIdx || state.hamiltonScope === 'all') {
+                maxAmp = Math.max(maxAmp, Math.abs(xc), Math.abs(xe));
+            }
+
+            L_c += 0.5 * o.m * vc * vc - 0.5 * o.k * xc * xc;
+            L_e += 0.5 * o.m * ve * ve - 0.5 * o.k * xe * xe;
+        }
+
+        const weight = (s === 0 || s === steps) ? 0.5 : 1.0;
+        S_crit += L_c * weight * dt;
+        S_var += L_e * weight * dt;
+    }
+
+    const deltaS = S_var - S_crit;
+    maxAmp = Math.max(2.6, maxAmp * 1.22);
+
+    // Grid
+    ctx.strokeStyle = c.grid;
+    ctx.lineWidth = 1;
+    for (let val = -Math.floor(maxAmp); val <= Math.floor(maxAmp); val++) {
+        const py = padT + plotH * (0.5 - val / (2 * maxAmp));
+        ctx.beginPath(); ctx.moveTo(padL, py); ctx.lineTo(padL + plotW, py); ctx.stroke();
+
+        ctx.fillStyle = c.textMuted;
+        ctx.font = '10px var(--font-mono)';
+        ctx.textAlign = 'right';
+        ctx.fillText(val.toFixed(1) + ' m', padL - 8, py + 3);
+    }
+
+    // Zero axis
+    const zeroY = padT + plotH * 0.5;
+    ctx.strokeStyle = c.axis;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(padL, zeroY); ctx.lineTo(padL + plotW, zeroY);
+    ctx.moveTo(padL, padT); ctx.lineTo(padL, h - padB);
+    ctx.stroke();
+    drawArrowhead(padL + plotW, zeroY, 0, c.axis, 6);
+
+    ctx.fillStyle = c.text;
+    ctx.font = 'bold 12px var(--font-math)';
+    ctx.textAlign = 'left';
+    ctx.fillText('t (s)', padL + plotW + 6, zeroY + 4);
+
+    // Draw curves (if scope === 'all', show all faded + selected bold; else show selected bold)
+    for (let i = 0; i < state.n; i++) {
+        const isSel = (i === selIdx);
+        if (state.hamiltonScope === 'selected' && !isSel) continue;
+
+        const color = getOscColor(i);
+
+        // Perturbed x_eps(t) (dashed)
+        ctx.save();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = isSel ? '#ef4444' : color;
+        ctx.globalAlpha = isSel ? 0.95 : 0.32;
+        ctx.lineWidth = isSel ? 2.2 : 1.2;
+        ctx.beginPath();
+        for (let s = 0; s <= steps; s++) {
+            const px = padL + (s / steps) * plotW;
+            const py = padT + plotH * (0.5 - xeCurves[i][s] / (2 * maxAmp));
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Critical x_c(t) (solid)
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = isSel ? 1.0 : 0.45;
+        ctx.lineWidth = isSel ? 3.0 : 1.5;
+        ctx.beginPath();
+        for (let s = 0; s <= steps; s++) {
+            const px = padL + (s / steps) * plotW;
+            const py = padT + plotH * (0.5 - xcCurves[i][s] / (2 * maxAmp));
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Fixed endpoints A0 & A1 for selected oscillator
+    const p0x = padL;
+    const p0y = padT + plotH * (0.5 - xcCurves[selIdx][0] / (2 * maxAmp));
+    const p1x = padL + plotW;
+    const p1y = padT + plotH * (0.5 - xcCurves[selIdx][steps] / (2 * maxAmp));
+
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.arc(p0x, p0y, 5.5, 0, 2 * Math.PI);
+    ctx.arc(p1x, p1y, 5.5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = c.text;
+    ctx.font = 'bold 11px var(--font-math)';
+    ctx.textAlign = 'left';
+    ctx.fillText(`A₀(0, x${SUBSCRIPTS[selIdx + 1]}(0))`, p0x + 6, p0y - 10);
+    ctx.textAlign = 'right';
+    ctx.fillText(`A₁(T, x${SUBSCRIPTS[selIdx + 1]}(T))`, p1x - 6, p1y - 10);
+
+    // Right-Side Numerical Action Card
+    const cx0 = w - cardW - 14;
+    const cy0 = padT;
+    const ch = Math.max(240, plotH);
+
+    ctx.fillStyle = c.panelBg;
+    ctx.strokeStyle = c.grid;
+    ctx.fillRect(cx0, cy0, cardW, ch);
+    ctx.strokeRect(cx0, cy0, cardW, ch);
+
+    ctx.fillStyle = c.text;
+    ctx.font = 'bold 13px var(--font-sans)';
+    ctx.textAlign = 'left';
+    ctx.fillText('Funcional Acción en ℝⁿ', cx0 + 14, cy0 + 26);
+
+    ctx.fillStyle = c.textMuted;
+    ctx.font = '11.5px var(--font-math)';
+    ctx.fillText('S[x] = ∫₀ᵀ ∑ᵢ (½mᵢẋᵢ² - ½kᵢxᵢ²) dt', cx0 + 14, cy0 + 46);
+
+    ctx.font = '12px var(--font-mono)';
+    ctx.fillStyle = getOscColor(selIdx);
+    ctx.fillText('Trayectoria crítica x_c(t):', cx0 + 14, cy0 + 78);
+    ctx.fillStyle = c.text;
+    ctx.fillText(`S[x_c] = ${S_crit.toFixed(5)} J·s`, cx0 + 14, cy0 + 96);
+
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText(`Variada x_ε(t) (ε = ${eps.toFixed(2)}):`, cx0 + 14, cy0 + 128);
+    ctx.fillStyle = c.text;
+    ctx.fillText(`S[x_ε] = ${S_var.toFixed(5)} J·s`, cx0 + 14, cy0 + 146);
+
+    // Delta S Box
+    const dBoxY = cy0 + 166;
+    ctx.fillStyle = c.bg;
+    ctx.strokeStyle = Math.abs(deltaS) < 1e-6 ? '#10b981' : '#f59e0b';
+    ctx.fillRect(cx0 + 14, dBoxY, cardW - 28, 46);
+    ctx.strokeRect(cx0 + 14, dBoxY, cardW - 28, 46);
+
+    ctx.fillStyle = Math.abs(deltaS) < 1e-6 ? '#10b981' : '#f59e0b';
+    ctx.font = 'bold 12px var(--font-mono)';
+    ctx.fillText('ΔS = S[x_ε] - S[x_c]', cx0 + 22, dBoxY + 18);
+    ctx.fillText(`   = ${deltaS >= 0 ? '+' : ''}${deltaS.toFixed(5)} J·s`, cx0 + 22, dBoxY + 36);
+
+    // Note
+    ctx.fillStyle = c.textMuted;
+    ctx.font = '11px var(--font-math)';
+    const notes = [
+        'Teorema (Principio de Hamilton):',
+        'Para toda ξ(t) con ξ(0)=ξ(T)=0,',
+        'x_c(t) es punto estacionario de S:',
+        'dS/dε |_(ε=0) = 0  ⇔  Euler-Lagrange.'
+    ];
+    notes.forEach((line, idx) => {
+        ctx.fillText(line, cx0 + 14, dBoxY + 72 + idx * 17);
+    });
+
+    ctx.restore();
+}
+
+/* =========================================================
+   UI SYNCHRONIZATION & EVENT HANDLERS
+   ========================================================= */
+function syncNUI() {
+    document.getElementById('sliderN').value = state.n;
+    document.getElementById('valN').textContent = `n = ${state.n}`;
+    document.getElementById('headerBadge').textContent = `(${state.n} GDL en ℝ${SUPERSCRIPTS[state.n]})`;
+    rebuildOscPills();
+}
+
+function rebuildOscPills() {
+    const containers = [
+        document.getElementById('oscPills'),
+        document.getElementById('oscPillsHamilton')
+    ];
+
+    containers.forEach(container => {
+        container.innerHTML = '';
+        for (let i = 0; i < state.n; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'osc-pill' + (i === state.selectedIdx ? ' active' : '');
+            const col = getOscColor(i);
+            btn.style.setProperty('--pill-color', col);
+            btn.innerHTML = `<span class="dot" style="background:${col}"></span>Osc. ${i + 1}`;
+            btn.addEventListener('click', () => {
+                state.selectedIdx = i;
+                syncSelectedOscUI();
+                rebuildOscPills();
+                updateTelemetry();
+                render();
+            });
+            container.appendChild(btn);
+        }
+    });
+}
+
+function syncSelectedOscUI() {
+    const idx = Math.min(state.selectedIdx, state.n - 1);
+    const o = state.oscs[idx];
+    const sub = SUBSCRIPTS[idx + 1];
+
+    document.getElementById('selectedOscLabel').textContent = `Osc. ${idx + 1}`;
+    document.getElementById('selectedOscLabel').style.color = getOscColor(idx);
+    document.getElementById('btnEqualize').textContent = `Igualar todos a #${idx + 1}`;
+
+    document.getElementById('lblM').textContent = `m${sub}`;
+    document.getElementById('lblK').textContent = `k${sub}`;
+    document.getElementById('lblX0').textContent = `x₀,${sub}`;
+    document.getElementById('lblV0').textContent = `v₀,${sub}`;
+
+    document.getElementById('sliderMass').value = o.m;
+    document.getElementById('valMass').textContent = o.m.toFixed(2) + ' kg';
+
+    document.getElementById('sliderK').value = o.k;
+    document.getElementById('valK').textContent = o.k.toFixed(2) + ' N/m';
+
+    document.getElementById('sliderX0').value = o.x0;
+    document.getElementById('valX0').textContent = o.x0.toFixed(2) + ' m';
+
+    document.getElementById('sliderV0').value = o.v0;
+    document.getElementById('valV0').textContent = o.v0.toFixed(2) + ' m/s';
+}
+
+function switchView(viewName) {
+    state.currentView = viewName;
+    document.querySelectorAll('.view-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === viewName);
+    });
+    document.body.classList.toggle('mode-hamilton', viewName === 'hamilton');
+    document.body.classList.toggle('mode-phase', viewName === 'phase');
+    render();
+}
+
+function showToast(msg) {
+    const toast = document.getElementById('toastNotification');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+function exportPNG() {
+    render();
+    const link = document.createElement('a');
+    link.download = `n_osciladores_n${state.n}_${state.currentView}.png`;
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('📷 Figura descargada en alta resolución PNG');
+}
+
+function copyLaTeX() {
+    let rows = '';
+    for (let i = 0; i < state.n; i++) {
+        const o = state.oscs[i];
+        rows += `    ${i + 1} & ${o.m.toFixed(2)} & ${o.k.toFixed(2)} & ${o.omega.toFixed(3)} & ${o.x0.toFixed(2)} & ${o.v0.toFixed(2)} & ${o.A.toFixed(3)} & ${o.E0.toFixed(3)} \\\\\n`;
+    }
+    const latexSnippet = `% Sistema de n = ${state.n} osciladores armónicos desacoplados (Sección 1.2)
+% EDO: \\ddot{x}_i + \\omega_i^2 x_i = 0,  i \\in \\{1,\\dots,${state.n}\\}
+% Energía total conservada: E = ${state.E0.toFixed(4)} J
+\\begin{table}[htbp]
+\\centering
+\\begin{tabular}{cccccccc}
+\\hline
+$i$ & $m_i$ (kg) & $k_i$ (N/m) & $\\omega_i$ (rad/s) & $x_{0,i}$ (m) & $v_{0,i}$ (m/s) & $A_i$ (m) & $E_i$ (J) \\\\
+\\hline
+${rows}\\hline
+\\end{tabular}
+\\caption{Parámetros del sistema de $n=${state.n}$ osciladores armónicos desacoplados.}
+\\end{table}`;
+
+    // Use execCommand fallback for reliable clipboard copy inside iframes
+    const ta = document.createElement('textarea');
+    ta.value = latexSnippet;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        showToast('📋 Tabla y ecuaciones LaTeX copiadas al portapapeles');
+    } catch (err) {
+        showToast('⚠️ No se pudo copiar automáticamente');
+    }
+    document.body.removeChild(ta);
+}
+
+/* =========================================================
+   DRAG & DROP ON ANY MASS m_i
+   ========================================================= */
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+}
+
+function handlePointerDown(e) {
+    if (state.currentView !== 'full') return;
+    const pos = getPointerPos(e);
+    for (const hb of massHitboxes) {
+        if (Math.hypot(pos.x - hb.cx, pos.y - hb.cy) <= hb.r) {
+            state.draggingIdx = hb.idx;
+            state.selectedIdx = hb.idx;
+            canvas.style.cursor = 'grabbing';
+            rebuildOscPills();
+            syncSelectedOscUI();
+            if (e.cancelable) e.preventDefault();
+            return;
+        }
+    }
+}
+
+function handlePointerMove(e) {
+    if (state.draggingIdx === -1) return;
+    const hb = massHitboxes[state.draggingIdx];
+    if (!hb) return;
+
+    const pos = getPointerPos(e);
+    let newX = (pos.x - hb.centerX) / hb.scaleX;
+    newX = Math.max(-3.0, Math.min(3.0, newX));
+
+    const o = state.oscs[state.draggingIdx];
+    o.x0 = Number(newX.toFixed(2));
+    o.v0 = 0.0;
+
+    syncSelectedOscUI();
+    resetSimulation();
+    if (e.cancelable) e.preventDefault();
+}
+
+function handlePointerUp() {
+    if (state.draggingIdx !== -1) {
+        state.draggingIdx = -1;
+        canvas.style.cursor = 'default';
+    }
+}
+
+/* =========================================================
+   SETUP EVENT LISTENERS
+   ========================================================= */
+function setupEventListeners() {
+    window.addEventListener('resize', resizeCanvas);
+
+    // View navigation
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    // Phase mode toggle
+    document.querySelectorAll('.phase-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.phase-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.phaseMode = btn.dataset.pmode;
+            render();
+        });
+    });
+
+    // Slider n (1..6)
+    document.getElementById('sliderN').addEventListener('input', (e) => {
+        state.n = parseInt(e.target.value, 10);
+        if (state.selectedIdx >= state.n) state.selectedIdx = state.n - 1;
+        syncNUI();
+        syncSelectedOscUI();
+        resetSimulation();
+    });
+
+    // Presets
+    document.getElementById('presetSelect').addEventListener('change', (e) => {
+        applyPreset(e.target.value);
+    });
+
+    // Play/Pause, Reset, Clear
+    const btnPlay = document.getElementById('btnPlayPause');
+    btnPlay.addEventListener('click', () => {
+        state.isPaused = !state.isPaused;
+        btnPlay.textContent = state.isPaused ? '▶️ Reanudar' : '⏸️ Pausa';
+    });
+    document.getElementById('btnReset').addEventListener('click', resetSimulation);
+    document.getElementById('btnClearTrace').addEventListener('click', clearTrace);
+
+    // Speed buttons
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.simSpeed = parseFloat(btn.dataset.speed);
+        });
+    });
+
+    // Per-oscillator sliders
+    function bindOscSlider(sliderId, valId, prop, unit) {
+        document.getElementById(sliderId).addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            state.oscs[state.selectedIdx][prop] = val;
+            document.getElementById(valId).textContent = val.toFixed(2) + ' ' + unit;
+            resetSimulation();
+        });
+    }
+    bindOscSlider('sliderMass', 'valMass', 'm', 'kg');
+    bindOscSlider('sliderK', 'valK', 'k', 'N/m');
+    bindOscSlider('sliderX0', 'valX0', 'x0', 'm');
+    bindOscSlider('sliderV0', 'valV0', 'v0', 'm/s');
+
+    // Randomize & Equalize
+    document.getElementById('btnRandomize').addEventListener('click', () => {
+        for (let i = 0; i < state.n; i++) {
+            state.oscs[i].m = Number((0.4 + Math.random() * 2.6).toFixed(1));
+            state.oscs[i].k = Number((0.8 + Math.random() * 10.0).toFixed(1));
+            state.oscs[i].x0 = Number((-2.5 + Math.random() * 5.0).toFixed(1));
+            state.oscs[i].v0 = Number((-2.0 + Math.random() * 4.0).toFixed(1));
+        }
+        syncSelectedOscUI();
+        resetSimulation();
+    });
+
+    document.getElementById('btnEqualize').addEventListener('click', () => {
+        const src = state.oscs[state.selectedIdx];
+        for (let i = 0; i < state.n; i++) {
+            state.oscs[i].m = src.m;
+            state.oscs[i].k = src.k;
+            state.oscs[i].x0 = src.x0;
+            state.oscs[i].v0 = src.v0;
+        }
+        resetSimulation();
+    });
+
+    // Variational sliders
+    document.getElementById('sliderEpsilon').addEventListener('input', (e) => {
+        state.epsilon = parseFloat(e.target.value);
+        document.getElementById('valEpsilon').textContent = state.epsilon.toFixed(2);
+        render();
+    });
+    document.getElementById('sliderHarmonic').addEventListener('input', (e) => {
+        state.h_harmonic = parseInt(e.target.value, 10);
+        document.getElementById('valHarmonic').textContent = state.h_harmonic;
+        render();
+    });
+    document.getElementById('sliderTVar').addEventListener('input', (e) => {
+        state.T_var = parseFloat(e.target.value);
+        document.getElementById('valTVar').textContent = state.T_var.toFixed(2) + ' s';
+        render();
+    });
+    document.getElementById('selectHamiltonScope').addEventListener('change', (e) => {
+        state.hamiltonScope = e.target.value;
+        render();
+    });
+
+    // Checkboxes
+    document.getElementById('chkPermanentTrace').addEventListener('change', (e) => {
+        state.permanentTrace = e.target.checked;
+    });
+    document.getElementById('chkShowVectors').addEventListener('change', (e) => {
+        state.showVectors = e.target.checked;
+        render();
+    });
+    document.getElementById('chkShowAnalytical').addEventListener('change', (e) => {
+        state.showAnalytical = e.target.checked;
+        render();
+    });
+
+    // LaTeX Paper Mode
+    const btnLatex = document.getElementById('btnLatexMode');
+    btnLatex.addEventListener('click', () => {
+        state.latexMode = !state.latexMode;
+        document.body.classList.toggle('latex-paper', state.latexMode);
+        btnLatex.classList.toggle('active', state.latexMode);
+        btnLatex.textContent = state.latexMode ? '🖥️ Modo Oscuro' : '📄 Modo Papel';
+        rebuildOscPills();
+        syncSelectedOscUI();
+        updateTelemetry();
+        render();
+    });
+
+    // Export & Copy
+    document.getElementById('btnExportPng').addEventListener('click', exportPNG);
+    document.getElementById('btnCopyLatex').addEventListener('click', copyLaTeX);
+
+    // Canvas Drag & Drop
+    canvas.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('touchend', handlePointerUp);
+}
+
+/* =========================================================
+   BOOT APPLICATION
+   ========================================================= */
+window.onload = function () {
+    createDefaultOscillators();
+    setupEventListeners();
+    syncNUI();
+    syncSelectedOscUI();
+    resizeCanvas();
+    resetSimulation();
+    requestAnimationFrame(simLoop);
+};
+</script>
+</body>
+</html>
